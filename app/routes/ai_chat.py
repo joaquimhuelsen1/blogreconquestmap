@@ -20,8 +20,8 @@ except ImportError:
     USING_NEW_CLIENT = False
     print("Usando cliente OpenAI legado (versão < 1.0.0)")
 
-# Configuração: ativar modo de simulação para não depender da API OpenAI
-SIMULATION_MODE = True
+# Configuração: desativar modo de simulação para usar a API OpenAI
+SIMULATION_MODE = False
 
 # Blueprint para IA de relacionamento
 ai_chat_bp = Blueprint('ai_chat', __name__)
@@ -52,6 +52,22 @@ def debug_environment_vars():
     print(f"Comprimento da OPENAI_API_KEY na config: {app_key_length} caracteres")
     if app_key_preview:
         print(f"Primeiros caracteres: {app_key_preview}")
+        
+    # Verificar o OPENAI_ASSISTANT_ID
+    assistant_id_env = os.environ.get('OPENAI_ASSISTANT_ID', 'Não definido')
+    assistant_id_status = "Definido" if assistant_id_env != 'Não definido' else "Não definido"
+    
+    print(f"OPENAI_ASSISTANT_ID no ambiente: {assistant_id_status}")
+    if assistant_id_status == "Definido":
+        print(f"Valor: {assistant_id_env}")
+    
+    # Verificar na configuração da aplicação
+    app_assistant_id = current_app.config.get('OPENAI_ASSISTANT_ID', 'Não definido na configuração')
+    app_assistant_status = "Definido" if app_assistant_id != 'Não definido na configuração' else "Não definido"
+    
+    print(f"OPENAI_ASSISTANT_ID na config da aplicação: {app_assistant_status}")
+    if app_assistant_status == "Definido":
+        print(f"Valor: {app_assistant_id}")
     
     print("==== FIM DEBUG VARIÁVEIS DE AMBIENTE ====\n")
 
@@ -264,8 +280,15 @@ def get_openai_response(user_message):
             # Tentar extrair a chave se ela estiver em um formato como "OPENAI_API_KEY=sk-..."
             if '=' in api_key and 'sk-' in api_key:
                 print("AVISO: Formato incorreto na chave da API. Tentando extrair...")
-                api_key = api_key.split('sk-')[1]
-                api_key = 'sk-' + api_key.split()[0].strip()
+                # Obter a parte após "sk-"
+                parts = api_key.split('sk-')
+                if len(parts) > 1:
+                    # Reconstruir a chave corretamente
+                    extracted_key = parts[1].split()[0].strip() if ' ' in parts[1] else parts[1].strip()
+                    api_key = 'sk-' + extracted_key
+                    print(f"Chave extraída com sucesso, novo comprimento: {len(api_key)}")
+                else:
+                    print("ERRO: Não foi possível extrair a chave corretamente")
         
         # Verificar se a API key tem uma estrutura válida (formato básico)
         if not api_key.startswith(('sk-', 'org-')):
