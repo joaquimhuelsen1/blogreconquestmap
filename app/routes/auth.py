@@ -9,6 +9,7 @@ import traceback
 from datetime import datetime
 import time
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
 
 # Configurar logging
 logging.basicConfig(
@@ -42,7 +43,7 @@ def login():
             if 'csrf_token' not in session:
                 logger.warning("Sessão sem token CSRF - inicializando nova sessão")
                 # Forçar uma regeneração do token na sessão
-                csrf.generate_csrf()
+                generate_csrf()
                 session.modified = True
                 
             # Se o formulário tem erro de validação e for por causa do CSRF, tentar tratar
@@ -50,7 +51,7 @@ def login():
                 logger.error(f"Erro de validação CSRF: {form.errors['csrf_token']}")
                 # Obter o token atual e mostrar um erro amigável
                 flash('Houve um problema de segurança com o formulário. Por favor, tente novamente.', 'danger')
-                return render_template('auth/login.html', form=form, csrf_token=csrf.generate_csrf())
+                return render_template('auth/login.html', form=form, csrf_token=generate_csrf())
         
         if form.validate_on_submit():
             logger.info(f"Tentativa de login: {form.email.data}")
@@ -73,7 +74,7 @@ def login():
                 flash('Invalid email or password', 'danger')
         
         # Sempre gerar um novo token CSRF para o template
-        new_csrf_token = csrf.generate_csrf()
+        new_csrf_token = generate_csrf()
         logger.info("Novo token CSRF gerado para o formulário de login")
         
         return render_template('auth/login.html', form=form, csrf_token=new_csrf_token)
@@ -109,7 +110,7 @@ def register():
             if 'csrf_token' not in session:
                 logger.warning("Sessão sem token CSRF - inicializando nova sessão")
                 # Forçar uma regeneração do token na sessão
-                csrf.generate_csrf()
+                generate_csrf()
                 session.modified = True
                 
             # Verificar token CSRF explicitamente
@@ -119,13 +120,13 @@ def register():
                 logger.error("Token CSRF ausente no formulário")
                 flash('Erro de segurança: Token CSRF ausente. Por favor, tente novamente.', 'danger')
                 # Renderizar o template com um novo token
-                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
+                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
             
             # Se o formulário tem erro de validação e for por causa do CSRF, tentar tratar
             if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
                 logger.error(f"Erro de validação CSRF: {form.errors['csrf_token']}")
                 flash('Houve um problema de segurança com o formulário. Por favor, tente novamente.', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
+                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
         
         if form.validate_on_submit():
             logger.info(f"Formulário validado: username={form.username.data}, email={form.email.data}")
@@ -137,12 +138,12 @@ def register():
             if existing_user:
                 logger.warning(f"Username já existe: {form.username.data}")
                 flash('Username already taken', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
+                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
                 
             if existing_email:
                 logger.warning(f"Email já existe: {form.email.data}")
                 flash('Email already registered', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
+                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
             
             # Criação do novo usuário
             try:
@@ -194,7 +195,7 @@ def register():
                 flash('An error occurred while creating your account. Please try again.', 'danger')
         
         # Sempre gerar um novo token CSRF para o template
-        new_csrf_token = csrf.generate_csrf()
+        new_csrf_token = generate_csrf()
         logger.info("Novo token CSRF gerado para o formulário de registro")
         
         return render_template('auth/register.html', form=form, csrf_token=new_csrf_token)
