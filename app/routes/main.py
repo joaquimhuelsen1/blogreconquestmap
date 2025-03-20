@@ -7,6 +7,19 @@ import os
 import requests
 import json
 import traceback  # Adicionar para debug
+import logging  # Adicionar para logs
+from datetime import datetime
+
+# Configurar logs
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("app_debug.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('blog_app')
 
 # Blueprint principal
 main_bp = Blueprint('main', __name__)
@@ -15,19 +28,58 @@ main_bp = Blueprint('main', __name__)
 def index():
     """Rota para a página inicial"""
     try:
-        page = request.args.get('page', 1, type=int)
+        logger.info("==== ACESSANDO PÁGINA INICIAL ====")
+        logger.info(f"Hora da solicitação: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"Usuário autenticado: {current_user.is_authenticated}")
         
-        # Aplicar contexto da aplicação explicitamente
-        with current_app.app_context():
-            # Consultar posts paginados
-            posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5)
+        if current_user.is_authenticated:
+            logger.info(f"ID do usuário: {current_user.id}, Nome: {current_user.username}")
+        
+        # Obter parâmetros da solicitação
+        page = request.args.get('page', 1, type=int)
+        logger.info(f"Parâmetro de página: {page}")
+        
+        try:
+            # Verificar configuração do banco de dados
+            db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', 'Não definido')
+            logger.info(f"String de conexão BD (parcial): {db_uri.split('@')[0].split(':')[0]}:***@{db_uri.split('@')[1] if '@' in db_uri else '(formato desconhecido)'}")
+        except Exception as db_config_err:
+            logger.error(f"Erro ao verificar config BD: {str(db_config_err)}")
             
-            # Renderizar template
-            return render_template('public/index.html', posts=posts)
+        # Registrar informações da sessão
+        logger.info(f"Cookie de sessão presente: {'session' in request.cookies}")
+        logger.info(f"CSRF token em sessão: {session.get('csrf_token', 'Não encontrado')}")
+        
+        # Verificar quantidade de posts (antes da paginação)
+        try:
+            with current_app.app_context():
+                total_posts = Post.query.count()
+                logger.info(f"Total de posts no banco de dados: {total_posts}")
+                
+                # Listar IDs dos primeiros 5 posts
+                first_posts = Post.query.order_by(Post.created_at.desc()).limit(5).all()
+                post_ids = [p.id for p in first_posts]
+                logger.info(f"IDs dos primeiros posts: {post_ids}")
+                
+                # Consultar posts paginados
+                logger.info("Executando consulta paginada de posts...")
+                posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5)
+                
+                logger.info(f"Paginação: page={posts.page}, per_page={posts.per_page}, total={posts.total}, pages={posts.pages}")
+                logger.info(f"Itens retornados: {len(posts.items)}")
+                
+                # Renderizar template
+                logger.info("Renderizando template 'public/index.html'")
+                return render_template('public/index.html', posts=posts)
+        except Exception as query_err:
+            logger.error(f"ERRO NA CONSULTA: {str(query_err)}")
+            logger.exception("Detalhes do erro na consulta:")
+            raise  # Re-lançar para ser capturado pelo try/except externo
+            
     except Exception as e:
         # Imprimir erro detalhado para debug
-        print(f"ERRO NA RENDERIZAÇÃO DA PÁGINA INICIAL: {str(e)}")
-        traceback.print_exc()
+        logger.error(f"ERRO NA RENDERIZAÇÃO DA PÁGINA INICIAL: {str(e)}")
+        logger.exception("Detalhes completos do erro:")
         
         # Tentar renderizar uma página mínima com informações do erro
         return render_template('errors/500.html', error=str(e)), 500
