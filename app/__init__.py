@@ -75,8 +75,11 @@ def create_app():
         print("Alterando para SQLite como fallback devido a erro de conexão...")
         # Alterar para SQLite como fallback
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'fallback.db')
-        db = SQLAlchemy(app)  # Reinicializar SQLAlchemy com nova configuração
-        
+        # Reinicializar a conexão mas manter a instância db
+        with app.app_context():
+            db.create_all()  # Criar as tabelas no SQLite
+            print("Tabelas criadas no SQLite de fallback")
+    
     if migrate is not None:
         migrate.init_app(app, db)
     login_manager.init_app(app)
