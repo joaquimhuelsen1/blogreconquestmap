@@ -6,6 +6,7 @@ from app.forms import CommentForm, ChatMessageForm
 import os
 import requests
 import json
+import traceback  # Adicionar para debug
 
 # Blueprint principal
 main_bp = Blueprint('main', __name__)
@@ -18,16 +19,17 @@ def index():
         
         # Aplicar contexto da aplicação explicitamente
         with current_app.app_context():
-            # Mostrar todos os posts para todos os usuários
-            posts = Post.query.order_by(Post.created_at.desc()).paginate(
-                page=page, per_page=5, error_out=False)
+            # Consultar posts paginados
+            posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5)
             
-            # Renderizar o template com os posts
+            # Renderizar template
             return render_template('public/index.html', posts=posts)
     except Exception as e:
-        # Log do erro
-        current_app.logger.error(f"Erro na rota index: {str(e)}")
-        # Redirecionar para uma página de erro ou mostrar uma mensagem
+        # Imprimir erro detalhado para debug
+        print(f"ERRO NA RENDERIZAÇÃO DA PÁGINA INICIAL: {str(e)}")
+        traceback.print_exc()
+        
+        # Tentar renderizar uma página mínima com informações do erro
         return render_template('errors/500.html', error=str(e)), 500
 
 @main_bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
