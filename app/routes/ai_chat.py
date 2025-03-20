@@ -6,8 +6,8 @@ from app.models import User
 import random
 import time
 import json
-import openai  # Importar o módulo inteiro em vez da classe
 import os
+from openai import OpenAI  # Importar o cliente OpenAI corretamente
 
 # Configuração: desativar modo de simulação (usar API OpenAI)
 SIMULATION_MODE = False
@@ -173,13 +173,13 @@ def get_openai_response(user_message):
         if not api_key:
             raise ValueError("Chave da API OpenAI não configurada. Verifique as variáveis de ambiente.")
         
-        # Configurar a API key
-        openai.api_key = api_key
-        print(f"API OpenAI configurada")
+        # Inicializar o cliente com a API key
+        client = OpenAI(api_key=api_key)
+        print(f"Cliente OpenAI configurado")
         
-        # Criar uma solicitação para a API
+        # Criar uma solicitação para a API usando o novo cliente
         print(f"Enviando solicitação ao modelo gpt-3.5-turbo")
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {
@@ -193,7 +193,7 @@ def get_openai_response(user_message):
         )
         print(f"Resposta recebida da API")
         
-        # Extrair o texto da resposta
+        # Extrair o texto da resposta (formato diferente com o novo cliente)
         assistant_response = response.choices[0].message.content
         
         return {

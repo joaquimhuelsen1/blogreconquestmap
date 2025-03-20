@@ -5,7 +5,7 @@ from flask_login import LoginManager
 import importlib.util
 # from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
-from config import Config
+from config import Config, SUPABASE_DIRECT_URL
 from datetime import datetime, timedelta
 import os
 import traceback
@@ -236,12 +236,40 @@ def create_app():
                     masked_url = f"{user_part}:***@{suffix}"
             logger.info(f"URL PostgreSQL: {masked_url}")
             
-            with app.app_context():
-                connection = db.engine.connect()
-                # Verificar a versão do PostgreSQL - usar text() para executar SQL
-                version = connection.execute(text("SELECT version();")).scalar()
-                logger.info(f"✅ Conexão PostgreSQL estabelecida: {version}")
-                connection.close()
+            try:
+                with app.app_context():
+                    connection = db.engine.connect()
+                    # Verificar a versão do PostgreSQL - usar text() para executar SQL
+                    version = connection.execute(text("SELECT version();")).scalar()
+                    logger.info(f"✅ Conexão PostgreSQL estabelecida: {version}")
+                    connection.close()
+            except Exception as pooler_error:
+                # Se falhar com o pooler, tentar conexão direta
+                if SUPABASE_DIRECT_URL:
+                    logger.warning(f"❌ Falha ao conectar via pooler: {str(pooler_error)}")
+                    logger.info("Tentando conexão direta com o banco de dados Supabase...")
+                    
+                    # Atualizar a configuração para usar conexão direta
+                    app.config['SQLALCHEMY_DATABASE_URI'] = SUPABASE_DIRECT_URL
+                    masked_direct = SUPABASE_DIRECT_URL.split('@')[0] + '@***'
+                    logger.info(f"URL direta: {masked_direct}")
+                    
+                    # Tentar novamente com conexão direta
+                    with app.app_context():
+                        try:
+                            # Recria engine com nova configuração
+                            db.get_engine(app).dispose()
+                            connection = db.engine.connect()
+                            # Verificar a versão do PostgreSQL
+                            version = connection.execute(text("SELECT version();")).scalar()
+                            logger.info(f"✅ Conexão direta PostgreSQL estabelecida: {version}")
+                            connection.close()
+                        except Exception as direct_error:
+                            logger.error(f"❌ Também falhou a conexão direta: {str(direct_error)}")
+                            raise direct_error
+                else:
+                    # Se não há URL direta disponível
+                    raise pooler_error
     except Exception as e:
         logger.error(f"❌ ERRO DE CONEXÃO COM BANCO DE DADOS: {str(e)}")
         logger.exception("Detalhes do erro de conexão:")
@@ -293,11 +321,18 @@ def create_app():
     # Registrar blueprints - Verificar se o módulo ou o pacote existe
     try:
         # Tentar importar do pacote app.routes (pasta)
-        from app.routes import main_bp, auth_bp, admin_bp, ai_chat_bp
-        app.register_blueprint(main_bp, name='main')  # Explicitar o nome do blueprint
+        from app.routes.main import main_bp
+        from app.routes.auth import auth_bp
+        from app.routes.admin import admin_bp
+        from app.routes.user import user_bp
+        from app.routes.temporary import temp_bp  # Import the temporary blueprint
+        
+        # Register blueprints
+        app.register_blueprint(main_bp)
         app.register_blueprint(auth_bp, url_prefix='/auth')
         app.register_blueprint(admin_bp, url_prefix='/admin')
-        app.register_blueprint(ai_chat_bp)
+        app.register_blueprint(user_bp, url_prefix='/user')
+        app.register_blueprint(temp_bp, url_prefix='/temp')  # Register the temporary blueprint
         logger.info("✅ Blueprints registrados da pasta app/routes/")
     except ImportError as e:
         logger.warning(f"Erro ao importar do pacote app.routes: {str(e)}")
