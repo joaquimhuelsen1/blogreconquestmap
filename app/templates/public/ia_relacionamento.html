@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}IA de Relacionamento - Reconquest Blog{% endblock %}
+{% block title %}Relationship AI - Reconquest Blog{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -19,43 +19,43 @@
     <div class="row">
         <div class="col-lg-8 mx-auto">
             <div class="chat-intro">
-                <h2>IA de Relacionamento</h2>
-                <p>Converse com nossa inteligência artificial especializada em relacionamentos. Tire dúvidas, peça conselhos ou compartilhe seus desafios amorosos.</p>
-                <p class="mb-0"><strong>Nota:</strong> Esta é uma ferramenta de auxílio e não substitui o aconselhamento profissional. Para casos específicos, considere consultar um profissional qualificado.</p>
+                <h2>Relationship AI</h2>
+                <p>Chat with our artificial intelligence specialized in relationships. Ask questions, get advice, or share your love challenges.</p>
+                <p class="mb-0"><strong>Note:</strong> This is a support tool and does not replace professional counseling. For specific cases, consider consulting a qualified professional.</p>
             </div>
             
             <div class="chat-container">
                 <div class="chat-header">
                     <div>
-                        <i class="fas fa-robot me-2"></i> Assistente Virtual de Relacionamento
+                        <i class="fas fa-robot me-2"></i> Virtual Relationship Assistant
                         {% if current_user.is_authenticated %}
                             {% if credits == -1 %}
-                            <span class="badge bg-success ms-2"><i class="fas fa-infinity"></i> Créditos ilimitados</span>
+                            <span class="badge bg-success ms-2"><i class="fas fa-infinity"></i> Unlimited credits</span>
                             {% else %}
-                            <span class="badge bg-info ms-2">Créditos: {{ credits }}</span>
+                            <span class="badge bg-info ms-2">Credits: {{ credits }}</span>
                             {% endif %}
                         {% endif %}
                     </div>
                     <button id="clearChat" class="btn btn-sm btn-outline-light">
-                        <i class="fas fa-trash-alt me-1"></i> Limpar
+                        <i class="fas fa-trash-alt me-1"></i> Clear
                     </button>
                 </div>
                 
                 <div class="chat-messages" id="chat-messages">
                     {% if not messages %}
                         <div class="assistant-message message">
-                            <p>Olá! Sou a IA de Relacionamento do Reconquest Blog. Como posso ajudar você hoje?</p>
-                            <div class="message-time">Agora</div>
+                            <p>Hello! I'm the Relationship AI from Reconquest Blog. How can I help you today?</p>
+                            <div class="message-time">Now</div>
                         </div>
                     {% else %}
                         {% for message in messages %}
                             <div class="user-message message">
                                 <p>{{ message.user }}</p>
-                                <div class="message-time">Você</div>
+                                <div class="message-time">You</div>
                             </div>
                             <div class="assistant-message message">
                                 <p>{{ message.assistant }}</p>
-                                <div class="message-time">Assistente</div>
+                                <div class="message-time">Assistant</div>
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -70,7 +70,7 @@
                                 <span class="dot"></span>
                                 <span class="dot"></span>
                             </div>
-                            <div class="message-time">Assistente</div>
+                            <div class="message-time">Assistant</div>
                         </div>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
                         {{ form.hidden_tag() }}
                         <div class="row g-0 align-items-center">
                             <div class="col">
-                                {{ form.message(class="form-control", placeholder="Digite sua mensagem aqui...", rows=2, id="messageInput") }}
+                                {{ form.message(class="form-control", placeholder="Type your message here...", rows=2, id="messageInput") }}
                             </div>
                             <div class="col-auto ms-2">
                                 <button type="submit" class="btn btn-send">
@@ -94,7 +94,7 @@
             
             <div class="mt-4 text-center">
                 <a href="{{ url_for('main.premium_subscription') }}" class="btn btn-premium">
-                    <i class="fas fa-crown me-2"></i> Acesse a versão premium para conversas ilimitadas
+                    <i class="fas fa-crown me-2"></i> Access the premium version for unlimited conversations
                 </a>
             </div>
         </div>

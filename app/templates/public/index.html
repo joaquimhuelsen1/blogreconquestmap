@@ -4,15 +4,15 @@
 
 {% block content %}
 <div class="jumbotron bg-light p-5 rounded mb-4">
-    <h1 class="display-4">{{ translate('welcome') }}</h1>
-    <p class="lead">{{ translate('specialized_content') }}</p>
+    <h1 class="display-4">Welcome to Reconquest Blog</h1>
+    <p class="lead">Specialized content on male reconquest and relationships.</p>
     <hr class="my-4">
-    <p>{{ translate('learn_strategies') }}</p>
+    <p>Learn the best strategies to improve your relationships and win the woman of your dreams.</p>
     {% if not current_user.is_authenticated %}
-    <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}" role="button">{{ translate('register_button') }}</a>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}" role="button">Register</a>
     {% elif not current_user.is_premium %}
     <div class="alert alert-info">
-        <p>{{ translate('free_version_notice') }}</p>
+        <p>You are accessing our free version. To access exclusive content, become a premium user!</p>
     </div>
     {% endif %}
 </div>
@@ -22,11 +22,11 @@
     <div class="card-body p-4">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h3 class="mb-3">{{ translate('test_banner_title') }}</h3>
-                <p class="mb-md-0">{{ translate('test_banner_description') }}</p>
+                <h3 class="mb-3">Let's Find Out What Kind Of Chance You Have With Your Ex</h3>
+                <p class="mb-md-0">My name is Ethan Heyes and I'm a specialist in helping couples reunite after breakups. Take my test to find out where you stand.</p>
             </div>
             <div class="col-md-4 text-center text-md-end">
-                <a href="{{ url_for('main.teste_de_reconquista') }}" class="btn btn-lg btn-primary px-4 py-2">{{ translate('take_test') }}</a>
+                <a href="{{ url_for('main.teste_de_reconquista') }}" class="btn btn-lg btn-primary px-4 py-2">Take the test</a>
             </div>
         </div>
     </div>
@@ -34,7 +34,7 @@
 
 <div class="row">
     <div class="col-md-8">
-        <h2 class="mb-4">{{ translate('recent_articles') }}</h2>
+        <h2 class="mb-4">Recent Articles</h2>
         
         {% if posts and posts.items %}
             {% for post in posts.items %}
@@ -42,25 +42,25 @@
                     <img src="{{ post.image_url }}" class="card-img-top" alt="{{ post.title }}" onerror="this.onerror=null;this.src='https://via.placeholder.com/1200x400?text=Image+Unavailable';">
                     {% if post.premium_only %}
                     <div class="position-absolute" style="top: 10px; right: 10px;">
-                        <span class="badge bg-warning text-dark p-2">{{ translate('premium_content') }}</span>
+                        <span class="badge bg-warning text-dark p-2">Premium Content</span>
                     </div>
                     {% endif %}
                     <div class="card-body">
                         <h3 class="card-title">{{ post.title }}</h3>
                         <div class="text-muted small mb-2">
-                            {{ translate('published_on') }} {{ post.created_at.strftime('%m/%d/%Y') }} {{ translate('by') }} {{ post.author.username }}
-                            <span class="ms-2"><i class="far fa-clock"></i> {{ post.get_reading_time() }} {{ translate('min_read') }}</span>
+                            Published on {{ post.created_at.strftime('%m/%d/%Y') }} by {{ post.author.username }}
+                            <span class="ms-2"><i class="far fa-clock"></i> {{ post.get_reading_time() }} min read</span>
                         </div>
                         <p class="card-text">{{ post.summary }}</p>
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ url_for('main.post', post_id=post.id) }}" class="btn btn-primary">{{ translate('read_more') }}</a>
+                            <a href="{{ url_for('main.post', post_id=post.id) }}" class="btn btn-primary">Read more</a>
                             
                             {% if post.premium_only %}
                             {% endif %}
                         </div>
                     </div>
                     <div class="card-footer text-muted">
-                        {{ translate('published_on') }} {{ post.created_at.strftime('%m/%d/%Y') }} {{ translate('by') }} {{ post.author.username }}
+                        Published on {{ post.created_at.strftime('%m/%d/%Y') }} by {{ post.author.username }}
                     </div>
                 </div>
             {% endfor %}
@@ -70,11 +70,11 @@
                 <ul class="pagination">
                     {% if posts and posts.has_prev %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('main.index', page=posts.prev_num) }}">{{ translate('previous') }}</a>
+                            <a class="page-link" href="{{ url_for('main.index', page=posts.prev_num) }}">Previous</a>
                         </li>
                     {% else %}
                         <li class="page-item disabled">
-                            <span class="page-link">{{ translate('previous') }}</span>
+                            <span class="page-link">Previous</span>
                         </li>
                     {% endif %}
                     
@@ -100,34 +100,34 @@
                     
                     {% if posts and posts.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('main.index', page=posts.next_num) }}">{{ translate('next') }}</a>
+                            <a class="page-link" href="{{ url_for('main.index', page=posts.next_num) }}">Next</a>
                         </li>
                     {% else %}
                         <li class="page-item disabled">
-                            <span class="page-link">{{ translate('next') }}</span>
+                            <span class="page-link">Next</span>
                         </li>
                     {% endif %}
                 </ul>
             </nav>
         {% else %}
-            <div class="alert alert-info">{{ translate('no_articles') }}</div>
+            <div class="alert alert-info">No articles published yet.</div>
         {% endif %}
     </div>
     
     <div class="col-md-4">
         <div class="card">
             <div class="card-header bg-warning text-white">
-                <h4 class="m-0">{{ translate('subscribe_premium') }}</h4>
+                <h4 class="m-0">Subscribe to Premium</h4>
             </div>
             <div class="card-body">
-                <p>{{ translate('get_access') }}</p>
+                <p>Get access to exclusive content about:</p>
                 <ul>
-                    <li>{{ translate('advanced_psychology') }}</li>
-                    <li>{{ translate('reconquest_strategies') }}</li>
-                    <li>{{ translate('exclusive_tips') }}</li>
-                    <li>{{ translate('personalized_support') }}</li>
+                    <li>Advanced female psychology</li>
+                    <li>Reconquest strategies</li>
+                    <li>Exclusive relationship tips</li>
+                    <li>Personalized support</li>
                 </ul>
-                <a href="{{ url_for('main.premium_subscription') }}" class="btn btn-warning w-100 text-white">{{ translate('learn_more') }}</a>
+                <a href="{{ url_for('main.premium_subscription') }}" class="btn btn-warning w-100 text-white">Learn more</a>
             </div>
         </div>
     </div>
