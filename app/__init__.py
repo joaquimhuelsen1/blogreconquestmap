@@ -98,7 +98,7 @@ def create_app():
     try:
         # Tentar importar do pacote app.routes (pasta)
         from app.routes import main_bp, auth_bp, admin_bp, ai_chat_bp
-        app.register_blueprint(main_bp)
+        app.register_blueprint(main_bp, name='main')  # Explicitar o nome do blueprint
         app.register_blueprint(auth_bp, url_prefix='/auth')
         app.register_blueprint(admin_bp, url_prefix='/admin')
         app.register_blueprint(ai_chat_bp)
@@ -108,7 +108,7 @@ def create_app():
         # Caso falhe, tentar importar do arquivo app/routes.py
         try:
             from app.routes import main_bp, auth_bp, admin_bp
-            app.register_blueprint(main_bp)
+            app.register_blueprint(main_bp, name='main')  # Explicitar o nome do blueprint
             app.register_blueprint(auth_bp, url_prefix='/auth')
             app.register_blueprint(admin_bp, url_prefix='/admin')
             
