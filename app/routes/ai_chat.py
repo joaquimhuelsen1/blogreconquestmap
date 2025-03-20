@@ -173,41 +173,88 @@ def get_openai_response(user_message):
         if not api_key:
             raise ValueError("Chave da API OpenAI não configurada. Verifique as variáveis de ambiente.")
         
+        # Log detalhado da API key (primeiros 4 caracteres)
+        key_preview = api_key[:4] + "..." if api_key else "None"
+        print(f"Usando API key: {key_preview}")
+        
         # Inicializar o cliente com a API key
-        client = OpenAI(api_key=api_key)
-        print(f"Cliente OpenAI configurado")
+        client = OpenAI(api_key=api_key, timeout=60.0)  # Aumentar timeout para 60 segundos
+        print(f"Cliente OpenAI configurado com timeout de 60 segundos")
         
         # Criar uma solicitação para a API usando o novo cliente
         print(f"Enviando solicitação ao modelo gpt-3.5-turbo")
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "Você é um especialista em relacionamentos e reconquista. Seu objetivo é ajudar pessoas a melhorarem seus relacionamentos amorosos e a reconquistar ex-parceiros de maneira saudável. Forneça conselhos práticos, diretos e personalizados para as situações descritas pelo usuário."
-                },
-                {"role": "user", "content": user_message}
-            ],
-            max_tokens=500,
-            temperature=0.7
-        )
-        print(f"Resposta recebida da API")
         
-        # Extrair o texto da resposta (formato diferente com o novo cliente)
-        assistant_response = response.choices[0].message.content
+        try:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "Você é um especialista em relacionamentos e reconquista. Seu objetivo é ajudar pessoas a melhorarem seus relacionamentos amorosos e a reconquistar ex-parceiros de maneira saudável. Forneça conselhos práticos, diretos e personalizados para as situações descritas pelo usuário."
+                    },
+                    {"role": "user", "content": user_message}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            print(f"Resposta recebida da API com sucesso")
+            
+            # Extrair o texto da resposta (formato diferente com o novo cliente)
+            assistant_response = response.choices[0].message.content
+            
+            return {
+                "success": True,
+                "message": assistant_response,
+                "debug_info": "Resposta gerada com sucesso pela API OpenAI"
+            }
         
-        return {
-            "success": True,
-            "message": assistant_response,
-            "debug_info": "Resposta gerada com sucesso pela API OpenAI"
-        }
+        except Exception as api_error:
+            import traceback
+            error_traceback = traceback.format_exc()
+            print(f"ERRO NA CHAMADA DA API: {str(api_error)}")
+            print(f"Traceback detalhado: {error_traceback}")
+            
+            # Tentar identificar o tipo de erro
+            error_type = type(api_error).__name__
+            error_message = str(api_error)
+            
+            print(f"Tipo de erro: {error_type}")
+            print(f"Mensagem de erro: {error_message}")
+            
+            if "timeout" in error_message.lower():
+                return {
+                    "success": False,
+                    "message": "A solicitação atingiu o tempo limite. Por favor, tente novamente.",
+                    "debug_info": f"Timeout error: {error_message}"
+                }
+            elif "rate limit" in error_message.lower():
+                return {
+                    "success": False,
+                    "message": "Estamos recebendo muitas solicitações no momento. Por favor, tente novamente em alguns minutos.",
+                    "debug_info": f"Rate limit error: {error_message}"
+                }
+            elif "authentication" in error_message.lower() or "api key" in error_message.lower():
+                return {
+                    "success": False,
+                    "message": "Erro de autenticação com o serviço de IA. Nossa equipe foi notificada.",
+                    "debug_info": f"Auth error: {error_message}"
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": get_fallback_response(error_message),
+                    "debug_info": f"API error: {error_message}"
+                }
     
     except Exception as e:
-        print(f"ERRO NA API OPENAI: {str(e)}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"ERRO NA CONFIGURAÇÃO DO OPENAI: {str(e)}")
+        print(f"Detalhes do erro: {error_details}")
         return {
             "success": False,
             "message": get_fallback_response(str(e)),
-            "debug_info": f"Erro na API: {str(e)}"
+            "debug_info": f"Setup error: {str(e)}"
         }
 
 @ai_chat_bp.route('/limpar-chat', methods=['POST'])
