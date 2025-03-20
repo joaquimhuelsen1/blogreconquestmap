@@ -11,6 +11,8 @@ import os
 import traceback
 import logging
 from sqlalchemy import text
+import re
+import socket
 
 # Configurar logging
 logging.basicConfig(
@@ -50,6 +52,69 @@ login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 
+def diagnose_connection(host, port=5432):
+    """Função para diagnosticar problemas de conectividade com banco de dados"""
+    results = {
+        "host": host,
+        "port": port,
+        "ip_resolved": None,
+        "can_connect": False,
+        "errors": []
+    }
+    
+    # Tentar resolver o hostname
+    try:
+        ip_address = socket.gethostbyname(host)
+        results["ip_resolved"] = ip_address
+        logger.info(f"✅ Hostname resolvido: {host} -> {ip_address}")
+    except socket.gaierror as e:
+        error_msg = f"❌ Não foi possível resolver o hostname: {host} - {str(e)}"
+        results["errors"].append(error_msg)
+        logger.error(error_msg)
+        # Tentar outras alternativas
+        alternate_hosts = [
+            "db.supabase.co",               # Host global do Supabase
+            f"db.{host.split('.',1)[1]}"    # Tentar com prefixo db
+        ]
+        for alt_host in alternate_hosts:
+            try:
+                logger.info(f"Tentando alternativa: {alt_host}")
+                alt_ip = socket.gethostbyname(alt_host)
+                results["alternate_host"] = alt_host
+                results["alternate_ip"] = alt_ip
+                logger.info(f"✅ Alternativa resolvida: {alt_host} -> {alt_ip}")
+                break
+            except socket.gaierror:
+                logger.warning(f"❌ Alternativa não resolvida: {alt_host}")
+    
+    # Se conseguiu resolver o IP, tentar conectar
+    if results["ip_resolved"]:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(2)
+            s.connect((results["ip_resolved"], port))
+            s.close()
+            results["can_connect"] = True
+            logger.info(f"✅ Conexão TCP estabelecida com {host}:{port}")
+        except Exception as e:
+            error_msg = f"❌ Não foi possível conectar a {host}:{port} - {str(e)}"
+            results["errors"].append(error_msg)
+            logger.error(error_msg)
+    
+    # Checar alternativa se houver
+    if not results["can_connect"] and "alternate_ip" in results:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(2)
+            s.connect((results["alternate_ip"], port))
+            s.close()
+            results["alternate_can_connect"] = True
+            logger.info(f"✅ Conexão TCP estabelecida com alternativa {results['alternate_host']}:{port}")
+        except Exception as e:
+            logger.error(f"❌ Não foi possível conectar à alternativa {results['alternate_host']}:{port} - {str(e)}")
+    
+    return results
+
 def setup_db_event_listeners(app_db):
     """Configura event listeners para o SQLAlchemy dentro do contexto"""
     @app_db.event.listens_for(app_db.engine, 'connect')
@@ -76,22 +141,40 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Verificar e corrigir URL para conectividade IPv4 do Supabase
+    # Verificar e corrigir URL para conectividade com Supabase
     if 'SQLALCHEMY_DATABASE_URI' in app.config and app.config['SQLALCHEMY_DATABASE_URI']:
         db_uri = app.config['SQLALCHEMY_DATABASE_URI']
-        if 'db.mqyasfpbtcdrxccuhchv.supabase.co' in db_uri:
-            app.config['SQLALCHEMY_DATABASE_URI'] = db_uri.replace(
-                'db.mqyasfpbtcdrxccuhchv.supabase.co', 
-                'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co'
-            )
-            logger.info("URL do Supabase corrigida em app/__init__.py: db.* -> db-pooler.* (compatibilidade IPv4)")
-        # Se encontrar postgres.*, também corrigir para db-pooler.*
-        elif 'postgres.mqyasfpbtcdrxccuhchv.supabase.co' in db_uri:
-            app.config['SQLALCHEMY_DATABASE_URI'] = db_uri.replace(
-                'postgres.mqyasfpbtcdrxccuhchv.supabase.co', 
-                'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co'
-            )
-            logger.info("URL do Supabase corrigida em app/__init__.py: postgres.* -> db-pooler.* (compatibilidade IPv4)")
+        
+        # Se a URL contém um host do Supabase mas não o host correto do pooler
+        if '.supabase.co' in db_uri and 'pooler.supabase.com' not in db_uri:
+            # Extrair user, password e o resto da URL
+            match = re.match(r'postgresql://([^:]+):([^@]+)@[^/]+/([^?]+)(.*)', db_uri)
+            if match:
+                user, password, dbname, params = match.groups()
+                # Reconstruir a URL com o host correto do pooler
+                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/{dbname}{params}"
+                logger.info("URL do Supabase corrigida em app/__init__.py para usar o host correto do pooler")
+            
+            # Garantir que SSL está habilitado
+            if '?' not in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.config['SQLALCHEMY_DATABASE_URI'] += '?sslmode=require'
+            elif 'sslmode=' not in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.config['SQLALCHEMY_DATABASE_URI'] += '&sslmode=require'
+                
+            logger.info(f"URL final do banco de dados: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[0]}@****")
+            
+            # Diagnosticar conectividade com o host correto
+            host = "aws-0-us-west-1.pooler.supabase.com"
+            logger.info(f"Diagnosticando conectividade com host do pooler: {host}")
+            diag_results = diagnose_connection(host, 5432)
+            if diag_results["ip_resolved"]:
+                logger.info(f"✅ Host do pooler resolvido: {host} -> {diag_results['ip_resolved']}")
+                if diag_results["can_connect"]:
+                    logger.info(f"✅ Conexão TCP possível com o host do pooler")
+                else:
+                    logger.warning(f"⚠️ Host resolvido mas conexão TCP não é possível - verifique firewall")
+            else:
+                logger.error(f"❌ Não foi possível resolver o host do pooler: {host}")
     
     # Log das configurações importantes (sem revelar senhas)
     safe_config = {k: v for k, v in app.config.items() 

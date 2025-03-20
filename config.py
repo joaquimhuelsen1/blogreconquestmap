@@ -26,41 +26,49 @@ class Config:
             DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
             print("URL de banco de dados corrigida: postgres:// -> postgresql://")
         
-        # Corrigir URL do Supabase para usar connection pooler (IPv4 compatibility)
-        if 'db.mqyasfpbtcdrxccuhchv.supabase.co' in DATABASE_URL:
-            # Tentar com o prefixo db-pooler em vez de postgres
-            DATABASE_URL = DATABASE_URL.replace('db.mqyasfpbtcdrxccuhchv.supabase.co', 
-                                              'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co')
-            print("URL do Supabase corrigida: db.* -> db-pooler.* (compatibilidade IPv4)")
+        # Corrigir URL do Supabase para usar o host correto do pooler
+        # Qualquer host que termina com supabase.co é substituído pelo valor correto
+        if '.supabase.co' in DATABASE_URL and 'pooler.supabase.com' not in DATABASE_URL:
+            # Extrair user, password e o resto da URL
+            import re
+            match = re.match(r'postgresql://([^:]+):([^@]+)@[^/]+/([^?]+)(.*)', DATABASE_URL)
+            if match:
+                user, password, dbname, params = match.groups()
+                # Reconstruir a URL com o host correto do pooler
+                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/{dbname}{params}"
+                print("URL do Supabase corrigida para usar o host correto do pooler")
+            
+        # Adicionar SSL mode se necessário
+        if '?' not in DATABASE_URL:
+            DATABASE_URL += '?sslmode=require'
+        elif 'sslmode=' not in DATABASE_URL:
+            DATABASE_URL += '&sslmode=require'
             
         # Usar a URL de conexão diretamente
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
-        print(f"Usando string de conexão do DATABASE_URL: {DATABASE_URL[:20]}...")
+        print(f"Usando string de conexão do DATABASE_URL: {DATABASE_URL.split('@')[0]}@****")
     else:
         # Fallback para as variáveis separadas do Supabase
         SUPABASE_DB_USER = os.environ.get('SUPABASE_DB_USER')
         SUPABASE_DB_PASSWORD = os.environ.get('SUPABASE_DB_PASSWORD')
-        SUPABASE_DB_HOST = os.environ.get('SUPABASE_DB_HOST')
+        SUPABASE_DB_HOST = os.environ.get('SUPABASE_DB_HOST', 'aws-0-us-west-1.pooler.supabase.com')
         SUPABASE_DB_PORT = os.environ.get('SUPABASE_DB_PORT', '5432')
         SUPABASE_DB_NAME = os.environ.get('SUPABASE_DB_NAME')
         
-        # Corrigir host do Supabase para usar connection pooler (IPv4 compatibility)
-        if SUPABASE_DB_HOST and 'db.mqyasfpbtcdrxccuhchv.supabase.co' in SUPABASE_DB_HOST:
-            SUPABASE_DB_HOST = SUPABASE_DB_HOST.replace('db.mqyasfpbtcdrxccuhchv.supabase.co', 
-                                                      'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co')
-            print("Host do Supabase corrigido: db.* -> db-pooler.* (compatibilidade IPv4)")
+        # Forçar o host correto independentemente do que estiver configurado
+        SUPABASE_DB_HOST = 'aws-0-us-west-1.pooler.supabase.com'
+        print("Host do Supabase configurado para usar o pooler correto")
         
         POSTGRES_CONFIGURED = all([
             SUPABASE_DB_USER, 
             SUPABASE_DB_PASSWORD, 
-            SUPABASE_DB_HOST, 
             SUPABASE_DB_NAME
         ])
         
         if POSTGRES_CONFIGURED:
             # Formar a URL de conexão com o PostgreSQL
-            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:{SUPABASE_DB_PORT}/{SUPABASE_DB_NAME}'
-            print("Usando conexão PostgreSQL via variáveis separadas")
+            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:{SUPABASE_DB_PORT}/{SUPABASE_DB_NAME}?sslmode=require'
+            print(f"Usando conexão PostgreSQL via variáveis separadas: {SQLALCHEMY_DATABASE_URI.split('@')[0]}@****")
         else:
             # Fallback para SQLite
             print("AVISO: Usando SQLite como fallback. Configure DATABASE_URL para usar PostgreSQL.")
