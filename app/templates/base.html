@@ -79,7 +79,7 @@
                     </li>
                     
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint and request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="/ai_chat/ia-relacionamento">
+                        <a class="nav-link {% if request.endpoint and request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="{{ url_for('ai_chat.ia_relacionamento') }}">
                             <i class="fas fa-robot"></i> IA de Relacionamento
                         </a>
                     </li>
@@ -95,7 +95,7 @@
                     {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint and 'admin.' in request.endpoint %}active{% endif %}" href="/admin/dashboard">
+                            <a class="nav-link {% if request.endpoint and 'admin.' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
                                 <i class="fas fa-tachometer-alt"></i> Admin
                             </a>
                         </li>
