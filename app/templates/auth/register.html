@@ -14,10 +14,8 @@
                     {% include '_messages.html' %}
                     
                     <form method="POST" action="{{ url_for('auth.register') }}">
-                        {{ form.hidden_tag() }}
-                        
-                        <!-- Garantir que o token CSRF está presente -->
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <!-- Usar token CSRF explícito passado pelo controlador -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         
                         <div class="form-group mb-3">
                             {{ form.username.label(class="form-label") }}

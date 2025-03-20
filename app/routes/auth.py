@@ -8,6 +8,7 @@ import logging
 import traceback
 from datetime import datetime
 import time
+from flask_wtf import CSRFProtect
 
 # Configurar logging
 logging.basicConfig(
@@ -23,6 +24,9 @@ logger = logging.getLogger('auth_debug')
 # Blueprint de autenticação
 auth_bp = Blueprint('auth', __name__)
 
+# Instanciar CSRFProtect
+csrf = CSRFProtect()
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     try:
@@ -31,6 +35,22 @@ def login():
             return redirect(url_for('main.index'))
         
         form = LoginForm()
+        
+        # Para requisições POST, verificar se há problemas com CSRF
+        if request.method == 'POST':
+            # Garantir que a sessão existe
+            if 'csrf_token' not in session:
+                logger.warning("Sessão sem token CSRF - inicializando nova sessão")
+                # Forçar uma regeneração do token na sessão
+                csrf.generate_csrf()
+                session.modified = True
+                
+            # Se o formulário tem erro de validação e for por causa do CSRF, tentar tratar
+            if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
+                logger.error(f"Erro de validação CSRF: {form.errors['csrf_token']}")
+                # Obter o token atual e mostrar um erro amigável
+                flash('Houve um problema de segurança com o formulário. Por favor, tente novamente.', 'danger')
+                return render_template('auth/login.html', form=form, csrf_token=csrf.generate_csrf())
         
         if form.validate_on_submit():
             logger.info(f"Tentativa de login: {form.email.data}")
@@ -41,7 +61,7 @@ def login():
                 login_user(user, remember=form.remember_me.data)
                 logger.info(f"Login bem-sucedido para: {user.email} (ID: {user.id})")
                 
-                # Registrar a sessão para garantir que o CSRF token seja salvo
+                # Registrar a sessão para garantir que o token CSRF seja salvo
                 session.modified = True
                 
                 next_page = request.args.get('next')
@@ -52,7 +72,11 @@ def login():
                 logger.warning(f"Falha de login para email: {form.email.data}")
                 flash('Invalid email or password', 'danger')
         
-        return render_template('auth/login.html', form=form)
+        # Sempre gerar um novo token CSRF para o template
+        new_csrf_token = csrf.generate_csrf()
+        logger.info("Novo token CSRF gerado para o formulário de login")
+        
+        return render_template('auth/login.html', form=form, csrf_token=new_csrf_token)
     except Exception as e:
         logger.error(f"Erro no login: {str(e)}")
         logger.error(traceback.format_exc())
@@ -79,14 +103,29 @@ def register():
         
         form = RegistrationForm()
         
+        # Para requisições POST, verificar se há problemas com CSRF
         if request.method == 'POST':
+            # Garantir que a sessão existe
+            if 'csrf_token' not in session:
+                logger.warning("Sessão sem token CSRF - inicializando nova sessão")
+                # Forçar uma regeneração do token na sessão
+                csrf.generate_csrf()
+                session.modified = True
+                
             # Verificar token CSRF explicitamente
             logger.info("Verificando token CSRF...")
             csrf_token = request.form.get('csrf_token')
             if not csrf_token:
                 logger.error("Token CSRF ausente no formulário")
-                flash('CSRF token missing', 'danger')
-                return render_template('auth/register.html', form=form)
+                flash('Erro de segurança: Token CSRF ausente. Por favor, tente novamente.', 'danger')
+                # Renderizar o template com um novo token
+                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
+            
+            # Se o formulário tem erro de validação e for por causa do CSRF, tentar tratar
+            if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
+                logger.error(f"Erro de validação CSRF: {form.errors['csrf_token']}")
+                flash('Houve um problema de segurança com o formulário. Por favor, tente novamente.', 'danger')
+                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
         
         if form.validate_on_submit():
             logger.info(f"Formulário validado: username={form.username.data}, email={form.email.data}")
@@ -98,12 +137,12 @@ def register():
             if existing_user:
                 logger.warning(f"Username já existe: {form.username.data}")
                 flash('Username already taken', 'danger')
-                return render_template('auth/register.html', form=form)
+                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
                 
             if existing_email:
                 logger.warning(f"Email já existe: {form.email.data}")
                 flash('Email already registered', 'danger')
-                return render_template('auth/register.html', form=form)
+                return render_template('auth/register.html', form=form, csrf_token=csrf.generate_csrf())
             
             # Criação do novo usuário
             try:
@@ -154,7 +193,11 @@ def register():
                 logger.exception("Detalhes completos do erro:")
                 flash('An error occurred while creating your account. Please try again.', 'danger')
         
-        return render_template('auth/register.html', form=form)
+        # Sempre gerar um novo token CSRF para o template
+        new_csrf_token = csrf.generate_csrf()
+        logger.info("Novo token CSRF gerado para o formulário de registro")
+        
+        return render_template('auth/register.html', form=form, csrf_token=new_csrf_token)
     except Exception as e:
         logger.error(f"❌ Erro inesperado no registro: {str(e)}")
         logger.exception("Detalhes completos do erro:")

@@ -27,7 +27,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger('blog_app_init')
 
+# Inicializar objetos
 db = SQLAlchemy()
+login_manager = LoginManager()
+csrf = CSRFProtect()  # Inicializar CSRF no nível do módulo
+
 # Verificar se Flask-Migrate está disponível
 flask_migrate_available = importlib.util.find_spec('flask_migrate') is not None
 if flask_migrate_available:
@@ -48,8 +52,6 @@ else:
     sess = None
     logger.warning("Flask-Session não está disponível")
 
-login_manager = LoginManager()
-csrf = CSRFProtect()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
@@ -208,6 +210,10 @@ def create_app():
         app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=14)
         app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
         app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+        app.config['WTF_CSRF_SSL_STRICT'] = False
+        # Configuração para cookies em navegação anônima
+        app.config['SESSION_COOKIE_HTTPONLY'] = True
+        app.config['SESSION_COOKIE_PATH'] = "/"
     else:
         # Production settings
         app.config['SESSION_COOKIE_SECURE'] = True
@@ -216,6 +222,10 @@ def create_app():
         app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=14)
         app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
         app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+        app.config['WTF_CSRF_SSL_STRICT'] = False
+        # Configuração para cookies em navegação anônima
+        app.config['SESSION_COOKIE_HTTPONLY'] = True
+        app.config['SESSION_COOKIE_PATH'] = "/"
     
     # Configurações da sessão
     app.config['SESSION_TYPE'] = 'filesystem'
@@ -227,14 +237,11 @@ def create_app():
     os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
     logger.info(f"Diretório de sessão: {app.config['SESSION_FILE_DIR']}")
     
-    # Garantir que a sessão esteja configurada para disponibilidade do CSRF
-    app.config['SESSION_COOKIE_SECURE'] = False  # Definir como True em produção com HTTPS
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    
     # Configuração CSRF
     app.config['WTF_CSRF_ENABLED'] = True
-    app.config['WTF_CSRF_SSL_STRICT'] = False  # Não verificar SSL estritamente para CSRF
+    app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
+    app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
+    app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken', 'X-CSRF-Token']
     logger.info(f"Proteção CSRF: ATIVADA, Tempo limite: {app.config['WTF_CSRF_TIME_LIMIT']}s")
     
     # Inicializar extensões
@@ -244,6 +251,10 @@ def create_app():
     # Configurar listeners dentro do contexto da aplicação
     with app.app_context():
         setup_db_event_listeners(db)
+    
+    # Inicializar CSRF protection antes de qualquer blueprint
+    csrf.init_app(app)
+    logger.info("CSRF protection inicializado")
     
     # Tentar conectar ao banco de dados
     try:
@@ -314,8 +325,6 @@ def create_app():
     if sess is not None:
         sess.init_app(app)
         logger.info("Flask-Session inicializado")
-    csrf.init_app(app)  # Inicializa proteção CSRF
-    logger.info("CSRF inicializado")
     
     # Configurar login manager
     login_manager.login_view = 'auth.login'
