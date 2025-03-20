@@ -63,6 +63,7 @@ class Post(db.Model):
     premium_only = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    reading_time = db.Column(db.Integer, nullable=True)  # Tempo de leitura em minutos (editável)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
 
@@ -74,7 +75,12 @@ class Post(db.Model):
         Calculate estimated reading time based on content length.
         Average reading speed: 200-250 words per minute.
         Returns reading time in minutes.
+        If reading_time is manually set, returns that value instead.
         """
+        # Se o tempo de leitura foi definido manualmente, retorne esse valor
+        if self.reading_time is not None:
+            return self.reading_time
+            
         # Strip HTML tags if present (simplified approach)
         import re
         text = re.sub(r'<.*?>', '', self.content)

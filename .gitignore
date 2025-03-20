@@ -27,7 +27,9 @@ instance/
 # Ambiente virtual
 venv/
 venv_new/
+venv312/
 ENV/
+.venv/
 
 # Variáveis de ambiente (contêm informações sensíveis)
 .env
@@ -41,8 +43,17 @@ ENV/
 *.sqlite
 *.sqlite3
 
+# Backups e diagnósticos
+backup_data/
+backup_utils/
+diagnosticos/
+
+# Arquivos de sessão
+flask_session/
+
 # Arquivos de log
 *.log
+logs/
 
 # Arquivos de IDE
 .idea/

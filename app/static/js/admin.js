@@ -3,18 +3,30 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin JS carregado');
     
-    // Confirmação para exclusão de post via JavaScript
-    const deleteButtons = document.querySelectorAll('.btn-delete-post');
-    if (deleteButtons.length > 0) {
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                if (!confirm('Tem certeza que deseja excluir este post?')) {
-                    e.preventDefault();
+    // Confirmação para exclusão de posts
+    const deleteForms = document.querySelectorAll('.delete-post-form');
+    if (deleteForms.length > 0) {
+        console.log('Formulários de exclusão encontrados:', deleteForms.length);
+        
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Impede o envio do formulário
+                
+                // Encontra o título do post na mesma linha da tabela
+                const row = form.closest('tr');
+                const title = row ? row.querySelector('td:first-child').textContent : 'este post';
+                
+                // Confirma com o usuário
+                if (confirm(`Tem certeza que deseja excluir o post "${title}"? Esta ação não pode ser desfeita.`)) {
+                    console.log('Exclusão confirmada para:', title);
+                    this.submit(); // Envia o formulário se confirmado
+                } else {
+                    console.log('Exclusão cancelada para:', title);
                 }
             });
         });
     }
-
+    
     // Configurar o editor de conteúdo quando existir
     const contentEditor = document.getElementById('content-editor');
     if (contentEditor) {

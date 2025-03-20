@@ -64,14 +64,30 @@ def create_post():
     
     if form.validate_on_submit():
         image_url = form.image_url.data if form.image_url.data else 'https://via.placeholder.com/1200x400'
+        
+        # Processar campos adicionais
+        reading_time = form.reading_time.data
+        created_at = request.form.get('created_at')
+        
+        # Criar post básico
         post = Post(
             title=form.title.data,
             summary=form.summary.data,
             content=form.content.data,
             image_url=image_url,
             premium_only=form.premium_only.data,
-            author=current_user
+            author=current_user,
+            reading_time=reading_time
         )
+        
+        # Processar data de publicação
+        if created_at and created_at.strip():
+            try:
+                from datetime import datetime
+                post.created_at = datetime.fromisoformat(created_at.replace('T', ' '))
+            except (ValueError, TypeError):
+                flash('Invalid date format. Using current date instead.', 'warning')
+        
         db.session.add(post)
         db.session.commit()
         
@@ -100,6 +116,10 @@ def edit_post(post_id):
         image_url = request.form.get('image_url')
         premium_only = 'premium_only' in request.form
         
+        # Novos campos
+        reading_time = request.form.get('reading_time')
+        created_at = request.form.get('created_at')
+        
         # Validar campos obrigatórios
         if not title or not summary or not content:
             flash('Please fill in all required fields.', 'danger')
@@ -111,6 +131,20 @@ def edit_post(post_id):
             if image_url and image_url.strip():
                 post.image_url = image_url
             post.premium_only = premium_only
+            
+            # Processar tempo de leitura
+            if reading_time and reading_time.strip() and reading_time.isdigit():
+                post.reading_time = int(reading_time)
+            else:
+                post.reading_time = None  # Usar cálculo automático
+                
+            # Processar data de publicação
+            if created_at and created_at.strip():
+                try:
+                    from datetime import datetime
+                    post.created_at = datetime.fromisoformat(created_at.replace('T', ' '))
+                except (ValueError, TypeError):
+                    flash('Invalid date format. Using original date.', 'warning')
             
             # Salvar no banco de dados
             db.session.commit()
@@ -125,10 +159,21 @@ def edit_post(post_id):
 @login_required
 @admin_required
 def delete_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    db.session.delete(post)
-    db.session.commit()
-    flash('Post deleted successfully!', 'success')
+    try:
+        post = Post.query.get_or_404(post_id)
+        
+        # Remover comentários relacionados para evitar problemas de integridade
+        Comment.query.filter_by(post_id=post_id).delete()
+        
+        # Excluir o post
+        db.session.delete(post)
+        db.session.commit()
+        flash('Post deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting post: {str(e)}', 'danger')
+        print(f"ERRO ao excluir post {post_id}: {str(e)}")
+        
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/comments/pending')

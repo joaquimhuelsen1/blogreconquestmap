@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -7,6 +7,7 @@ from flask_wtf.csrf import CSRFProtect
 from config import Config
 from datetime import datetime, timedelta
 import os
+import traceback
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -58,6 +59,9 @@ def create_app():
     # Handler para requisições AJAX retornarem JSON em caso de erro
     @app.errorhandler(Exception)
     def handle_exception(e):
+        print(f"ERRO NA APLICAÇÃO: {str(e)}")
+        traceback.print_exc()  # Imprime o traceback completo para debugging
+        
         # Verificar se a requisição é AJAX
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             app.logger.error(f"Erro na requisição AJAX: {str(e)}")
@@ -68,22 +72,61 @@ def create_app():
             })
             response.headers['Content-Type'] = 'application/json'
             return response, 500
-        # Caso contrário, deixar o Flask lidar normalmente
-        return e
+        
+        # Página de erro customizada
+        return render_template('errors/500.html', error=str(e)), 500
     
-    # Registrar blueprints
-    from app.routes import main_bp, auth_bp, admin_bp, ai_chat_bp
-    app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(ai_chat_bp)
+    # Registrar blueprints - Verificar se o módulo ou o pacote existe
+    try:
+        # Tentar importar do pacote app.routes (pasta)
+        from app.routes import main_bp, auth_bp, admin_bp, ai_chat_bp
+        app.register_blueprint(main_bp)
+        app.register_blueprint(auth_bp, url_prefix='/auth')
+        app.register_blueprint(admin_bp, url_prefix='/admin')
+        app.register_blueprint(ai_chat_bp)
+        print("Blueprints registrados da pasta app/routes/")
+    except ImportError as e:
+        print(f"Erro ao importar do pacote app.routes: {str(e)}")
+        # Caso falhe, tentar importar do arquivo app/routes.py
+        try:
+            from app.routes import main_bp, auth_bp, admin_bp
+            app.register_blueprint(main_bp)
+            app.register_blueprint(auth_bp, url_prefix='/auth')
+            app.register_blueprint(admin_bp, url_prefix='/admin')
+            
+            # Tentar importar o ai_chat_bp separadamente, pois pode não existir no arquivo
+            try:
+                from app.routes import ai_chat_bp
+                app.register_blueprint(ai_chat_bp)
+            except ImportError:
+                print("Blueprint ai_chat_bp não encontrado")
+            
+            print("Blueprints registrados do arquivo app/routes.py")
+        except ImportError as e:
+            print(f"ERRO FATAL: Não foi possível importar os blueprints: {str(e)}")
+            traceback.print_exc()
     
     with app.app_context():
         # Importações que dependem do contexto da aplicação
         from app.models import User, Post
         
         # Criar tabelas do banco de dados se não existirem
-        db.create_all()
+        try:
+            db.create_all()
+            print("Tabelas do banco de dados criadas com sucesso")
+        except Exception as e:
+            print(f"Erro ao criar tabelas do banco de dados: {str(e)}")
+            traceback.print_exc()
+    
+    # Página de erro para 404
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
+    
+    # Página de erro para 500
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return render_template('errors/500.html', error=str(e)), 500
     
     # Adicionar variável now para os templates
     @app.context_processor

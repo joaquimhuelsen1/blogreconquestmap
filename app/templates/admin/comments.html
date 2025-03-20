@@ -26,8 +26,8 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>Autor</th>
                                     <th>Post</th>
+                                    <th>Autor</th>
                                     <th>Comentário</th>
                                     <th>Data</th>
                                     <th>Ações</th>
@@ -39,16 +39,17 @@
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <i class="fas fa-user me-2"></i>
-                                                {{ comment.author.username }}
+                                                {{ comment.post.title }}
                                             </div>
                                         </td>
                                         <td>
-                                            <a href="{{ url_for('main.post', post_id=comment.post.id) }}" target="_blank">
-                                                {{ comment.post.title[:30] }}{% if comment.post.title|length > 30 %}...{% endif %}
-                                            </a>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user me-2"></i>
+                                                {{ comment.author.username }}
+                                            </div>
                                         </td>
-                                        <td>{{ comment.content[:100] }}{% if comment.content|length > 100 %}...{% endif %}</td>
-                                        <td>{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>{{ comment.content[:50] + '...' if comment.content|length > 50 else comment.content }}</td>
+                                        <td>{{ comment.created_at.strftime('%m/%d/%Y %H:%M') }}</td>
                                         <td>
                                             <div class="btn-group">
                                                 <form action="{{ url_for('admin.approve_comment', comment_id=comment.id) }}" method="POST" class="d-inline">

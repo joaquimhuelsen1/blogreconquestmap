@@ -35,7 +35,7 @@
                                     <td>{{ user.id }}</td>
                                     <td>{{ user.username }}</td>
                                     <td>{{ user.email }}</td>
-                                    <td>{{ user.age if user.age else '-' }}</td>
+                                    <td>{{ user.age or 'N/A' }}</td>
                                     <td>
                                         {% if user.is_admin %}
                                         <span class="badge bg-danger">Administrador</span>
@@ -45,7 +45,7 @@
                                         <span class="badge bg-secondary">Regular</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ user.created_at.strftime('%m/%d/%Y') }}</td>
                                     <td>
                                         <div class="btn-group">
                                             <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">

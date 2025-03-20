@@ -12,25 +12,23 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    page = request.args.get('page', 1, type=int)
-    
-    # Mostrar todos os posts para todos os usuários (incluindo premium)
-    posts = Post.query.order_by(Post.created_at.desc()).paginate(
-        page=page, per_page=5, error_out=False)
-    
-    # Verificar e consertar posts com imagens quebradas
-    for post in posts.items:
-        if post.id == 4:
-            # Atualizar a URL da imagem do post 4 com a nova URL
-            post.image_url = "https://img.freepik.com/free-photo/side-view-couple-holding-each-other_23-2148735555.jpg?t=st=1742409398~exp=1742412998~hmac=59e342a62de1c61aedc5a53c00356ab4406ded130e98eca884480d2d68360910&w=900"
-            db.session.commit()
-        elif not post.image_url or not post.image_url.strip() or (not post.image_url.startswith(('http://', 'https://')) and post.image_url.startswith('/static/')):
-            static_path = os.path.join('app', post.image_url[1:] if post.image_url.startswith('/') else '')
-            if not os.path.exists(static_path):
-                post.image_url = 'https://via.placeholder.com/1200x400?text=Post+' + str(post.id)
-                db.session.commit()
-    
-    return render_template('public/index.html', posts=posts)
+    """Rota para a página inicial"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        
+        # Aplicar contexto da aplicação explicitamente
+        with current_app.app_context():
+            # Mostrar todos os posts para todos os usuários
+            posts = Post.query.order_by(Post.created_at.desc()).paginate(
+                page=page, per_page=5, error_out=False)
+            
+            # Renderizar o template com os posts
+            return render_template('public/index.html', posts=posts)
+    except Exception as e:
+        # Log do erro
+        current_app.logger.error(f"Erro na rota index: {str(e)}")
+        # Redirecionar para uma página de erro ou mostrar uma mensagem
+        return render_template('errors/500.html', error=str(e)), 500
 
 @main_bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
 def post(post_id):

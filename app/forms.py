@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, URLField, IntegerField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, URLField, IntegerField, DateTimeField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, URL, Optional, NumberRange
 from app.models import User
+from datetime import datetime
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -31,6 +32,8 @@ class PostForm(FlaskForm):
     summary = TextAreaField('Summary', validators=[DataRequired(), Length(max=200)])
     content = TextAreaField('Content', validators=[DataRequired()])
     image_url = StringField('Image URL', validators=[Optional(), URL()], description="Enter a URL for the post's cover image. If left empty, a placeholder will be used.")
+    reading_time = IntegerField('Reading Time (minutes)', validators=[Optional(), NumberRange(min=1, max=60)], description="Estimated reading time in minutes. Leave empty for automatic calculation.")
+    created_at = DateTimeField('Publication Date', format='%Y-%m-%dT%H:%M', validators=[Optional()], default=datetime.utcnow, description="Publication date and time. Leave empty to use current date.")
     premium_only = BooleanField('Premium Only', default=False, description="If checked, only premium users will be able to access this post.")
     submit = SubmitField('Save Post')
 

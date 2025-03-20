@@ -61,7 +61,9 @@
                     </form>
                 </div>
                 <div class="card-footer text-muted">
-                    <small>Usuário criado em: {{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                    <div class="col-12 text-muted mt-3">
+                        <small>Usuário criado em: {{ user.created_at.strftime('%m/%d/%Y %H:%M') }}</small>
+                    </div>
                 </div>
             </div>
         </div>

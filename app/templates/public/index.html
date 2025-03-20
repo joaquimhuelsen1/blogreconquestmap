@@ -48,7 +48,7 @@
                     <div class="card-body">
                         <h3 class="card-title">{{ post.title }}</h3>
                         <div class="text-muted small mb-2">
-                            Published on {{ post.created_at.strftime('%d/%m/%Y') }} by {{ post.author.username }}
+                            Published on {{ post.created_at.strftime('%m/%d/%Y') }} by {{ post.author.username }}
                             <span class="ms-2"><i class="far fa-clock"></i> {{ post.get_reading_time() }} min read</span>
                         </div>
                         <p class="card-text">{{ post.summary }}</p>
@@ -58,6 +58,9 @@
                             {% if post.premium_only %}
                             {% endif %}
                         </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        Published on {{ post.created_at.strftime('%m/%d/%Y') }} by {{ post.author.username }}
                     </div>
                 </div>
             {% endfor %}
