@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User
 from app.forms import LoginForm, RegistrationForm, ProfileUpdateForm, PasswordChangeForm
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlparse
 import logging
 import traceback
 from datetime import datetime
@@ -27,37 +27,30 @@ auth_bp = Blueprint('auth', __name__)
 def login():
     try:
         if current_user.is_authenticated:
+            logger.info(f"Usuário já autenticado ({current_user.username}), redirecionando...")
             return redirect(url_for('main.index'))
         
         form = LoginForm()
+        
         if form.validate_on_submit():
-            logger.info(f"Tentativa de login: email={form.email.data}")
+            logger.info(f"Tentativa de login: {form.email.data}")
             
-            # Buscar usuário pelo email
             user = User.query.filter_by(email=form.email.data).first()
             
-            # Verificar se o usuário existe
-            if user is None:
-                logger.warning(f"Usuário não encontrado: {form.email.data}")
+            if user and user.check_password(form.password.data):
+                login_user(user, remember=form.remember_me.data)
+                logger.info(f"Login bem-sucedido para: {user.email} (ID: {user.id})")
+                
+                # Registrar a sessão para garantir que o CSRF token seja salvo
+                session.modified = True
+                
+                next_page = request.args.get('next')
+                if not next_page or urlparse(next_page).netloc != '':
+                    next_page = url_for('main.index')
+                return redirect(next_page)
+            else:
+                logger.warning(f"Falha de login para email: {form.email.data}")
                 flash('Invalid email or password', 'danger')
-                return redirect(url_for('auth.login'))
-            
-            # Verificar a senha
-            password_ok = user.check_password(form.password.data)
-            logger.info(f"Verificação de senha para {user.username}: {password_ok}")
-            
-            if not password_ok:
-                flash('Invalid email or password', 'danger')
-                return redirect(url_for('auth.login'))
-            
-            # Login do usuário
-            login_user(user, remember=form.remember_me.data)
-            logger.info(f"Login bem-sucedido: {user.username}")
-            
-            next_page = request.args.get('next')
-            if not next_page or urlsplit(next_page).netloc != '':
-                next_page = url_for('main.index')
-            return redirect(next_page)
         
         return render_template('auth/login.html', form=form)
     except Exception as e:
@@ -69,6 +62,8 @@ def login():
 @auth_bp.route('/logout')
 def logout():
     logout_user()
+    # Limpar a sessão
+    session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.index'))
 
@@ -83,6 +78,15 @@ def register():
             return redirect(url_for('main.index'))
         
         form = RegistrationForm()
+        
+        if request.method == 'POST':
+            # Verificar token CSRF explicitamente
+            logger.info("Verificando token CSRF...")
+            csrf_token = request.form.get('csrf_token')
+            if not csrf_token:
+                logger.error("Token CSRF ausente no formulário")
+                flash('CSRF token missing', 'danger')
+                return render_template('auth/register.html', form=form)
         
         if form.validate_on_submit():
             logger.info(f"Formulário validado: username={form.username.data}, email={form.email.data}")
@@ -101,77 +105,60 @@ def register():
                 flash('Email already registered', 'danger')
                 return render_template('auth/register.html', form=form)
             
-            # Criar novo usuário
-            logger.info("Criando novo objeto de usuário")
-            user = User(username=form.username.data, email=form.email.data)
-            user.set_password(form.password.data)
-            
+            # Criação do novo usuário
             try:
+                logger.info("Criando novo objeto de usuário")
+                user = User(
+                    username=form.username.data, 
+                    email=form.email.data,
+                    is_admin=False,
+                    is_premium=False
+                )
+                user.set_password(form.password.data)
+                
                 logger.info("Adicionando usuário à sessão")
                 db.session.add(user)
                 
-                # Definir timeout para o commit para evitar travamentos
-                MAX_RETRIES = 3
-                retry_count = 0
-                commit_success = False
-                
-                while retry_count < MAX_RETRIES and not commit_success:
+                # Commit para o banco de dados com tratamento de erros mais robusto
+                attempt = 1
+                max_attempts = 3
+                success = False
+                while attempt <= max_attempts and not success:
                     try:
-                        logger.info(f"Tentativa {retry_count+1} de commit na sessão")
-                        # Definir timeout de 10 segundos para o commit
+                        logger.info(f"Tentativa {attempt} de commit na sessão")
                         db.session.commit()
-                        commit_success = True
+                        success = True
                         logger.info("✅ Commit realizado com sucesso")
-                    except Exception as commit_err:
-                        retry_count += 1
-                        logger.error(f"Erro no commit (tentativa {retry_count}): {str(commit_err)}")
-                        
-                        # Rollback e espera antes de tentar novamente
+                    except Exception as commit_error:
                         db.session.rollback()
-                        if retry_count < MAX_RETRIES:
-                            wait_time = 1 * retry_count  # Aumenta o tempo de espera a cada tentativa
-                            logger.info(f"Aguardando {wait_time}s antes de tentar novamente...")
-                            time.sleep(wait_time)
+                        logger.error(f"Erro no commit (tentativa {attempt}): {str(commit_error)}")
+                        attempt += 1
+                        if attempt <= max_attempts:
+                            logger.info(f"Tentando commit novamente...")
                 
-                if not commit_success:
-                    logger.error("❌ Falha após todas as tentativas de commit")
-                    flash('There was a problem creating your account. Please try again.', 'danger')
-                    return render_template('auth/register.html', form=form)
-                
-                # Verificar se o usuário foi realmente criado
-                created_user = User.query.filter_by(email=form.email.data).first()
-                if created_user:
-                    logger.info(f"✅ Usuário criado com sucesso: ID={created_user.id}")
-                else:
-                    logger.error("❌ Usuário não encontrado após commit!")
+                if success:
+                    # Garantir que o ID foi atribuído corretamente
+                    db.session.refresh(user)
+                    logger.info(f"✅ Usuário criado com sucesso: ID={user.id}")
+                    flash('Your account has been created! You can now log in.', 'success')
                     
-                flash('Congratulations, you are now registered!', 'success')
-                return redirect(url_for('auth.login'))
-            except Exception as db_error:
-                db.session.rollback()
-                logger.error(f"❌ ERRO AO SALVAR USUÁRIO NO BANCO: {str(db_error)}")
-                logger.error(traceback.format_exc())
-                # Tentar acessar detalhes do erro do PostgreSQL
-                pgcode = getattr(db_error, 'pgcode', None)
-                if pgcode:
-                    logger.error(f"Código de erro PostgreSQL: {pgcode}")
-                
-                # Mensagem específica para o usuário
-                error_msg = "An error occurred during registration."
-                if hasattr(db_error, 'orig') and db_error.orig is not None:
-                    if 'timeout' in str(db_error.orig).lower():
-                        error_msg = "The database connection timed out. Please try again."
-                    elif 'permission' in str(db_error.orig).lower():
-                        error_msg = "Permission error. Please contact the administrator."
-                
-                flash(error_msg, 'danger')
-                return render_template('auth/register.html', form=form)
+                    # Garantir que a sessão é salva para manter o token CSRF
+                    session.modified = True
+                    
+                    return redirect(url_for('auth.login'))
+                else:
+                    logger.error("❌ Falha ao criar usuário após múltiplas tentativas")
+                    flash('An error occurred while creating your account. Please try again.', 'danger')
+            except Exception as user_creation_error:
+                logger.error(f"❌ Erro na criação do usuário: {str(user_creation_error)}")
+                logger.exception("Detalhes completos do erro:")
+                flash('An error occurred while creating your account. Please try again.', 'danger')
         
         return render_template('auth/register.html', form=form)
     except Exception as e:
-        logger.error(f"❌ ERRO GERAL NO REGISTRO: {str(e)}")
-        logger.error(traceback.format_exc())
-        flash('An error occurred. Please try again.', 'danger')
+        logger.error(f"❌ Erro inesperado no registro: {str(e)}")
+        logger.exception("Detalhes completos do erro:")
+        flash('An unexpected error occurred. Please try again later.', 'danger')
         return redirect(url_for('main.index'))
 
 @auth_bp.route('/profile', methods=['GET', 'POST'])

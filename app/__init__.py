@@ -199,20 +199,42 @@ def create_app():
         logger.info("Nova SECRET_KEY gerada")
     logger.info(f"SECRET_KEY configurada: {app.config.get('SECRET_KEY')[:5]}...")
     
+    # Local dev settings
+    if config.ENV == 'development':
+        app.config['SERVER_NAME'] = None
+        app.config['SESSION_COOKIE_SECURE'] = False
+        app.config['REMEMBER_COOKIE_SECURE'] = False
+        app.config['WTF_CSRF_TIME_LIMIT'] = 86400  # 24 horas
+        app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=14)
+        app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
+        app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+    else:
+        # Production settings
+        app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['REMEMBER_COOKIE_SECURE'] = True
+        app.config['WTF_CSRF_TIME_LIMIT'] = 86400  # 24 horas
+        app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=14)
+        app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
+        app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+    
     # Configurações da sessão
-    if flask_session_available:
-        app.config['SESSION_TYPE'] = 'filesystem'
-        app.config['SESSION_PERMANENT'] = True
-        app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
-        app.config['SESSION_FILE_DIR'] = os.path.join(app.instance_path, 'flask_session')
-        app.config['SESSION_USE_SIGNER'] = True
-        app.config['SESSION_KEY_PREFIX'] = 'reconquest_'
-        os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
-        logger.info(f"Diretório de sessão: {app.config['SESSION_FILE_DIR']}")
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['SESSION_PERMANENT'] = True
+    app.config['SESSION_USE_SIGNER'] = True
+    app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+    app.config['SESSION_FILE_DIR'] = os.path.join(app.instance_path, 'flask_session')
+    app.config['SESSION_KEY_PREFIX'] = 'reconquest_'
+    os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+    logger.info(f"Diretório de sessão: {app.config['SESSION_FILE_DIR']}")
+    
+    # Garantir que a sessão esteja configurada para disponibilidade do CSRF
+    app.config['SESSION_COOKIE_SECURE'] = False  # Definir como True em produção com HTTPS
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
     # Configuração CSRF
     app.config['WTF_CSRF_ENABLED'] = True
-    app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hora
+    app.config['WTF_CSRF_SSL_STRICT'] = False  # Não verificar SSL estritamente para CSRF
     logger.info(f"Proteção CSRF: ATIVADA, Tempo limite: {app.config['WTF_CSRF_TIME_LIMIT']}s")
     
     # Inicializar extensões
