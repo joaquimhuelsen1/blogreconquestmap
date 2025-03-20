@@ -19,7 +19,11 @@ packages = [
     'flask-migrate',
     'flask-wtf',
     'pymysql',
-    'python-dotenv'
+    'python-dotenv',
+    'flask-session',
+    'email_validator',
+    'markdown',
+    'openai'
 ]
 
 # Instalar pacotes
