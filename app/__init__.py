@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from flask_migrate import Migrate
+# Importar Flask-Migrate condicionalmente
+import importlib.util
 from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
 from config import Config
@@ -10,7 +11,14 @@ import os
 import traceback
 
 db = SQLAlchemy()
-migrate = Migrate()
+# Verificar se Flask-Migrate está disponível
+flask_migrate_available = importlib.util.find_spec('flask_migrate') is not None
+if flask_migrate_available:
+    from flask_migrate import Migrate
+    migrate = Migrate()
+else:
+    migrate = None
+
 login_manager = LoginManager()
 sess = Session()
 csrf = CSRFProtect()
@@ -46,7 +54,8 @@ def create_app():
     
     # Inicializar extensões
     db.init_app(app)
-    migrate.init_app(app, db)
+    if migrate is not None:
+        migrate.init_app(app, db)
     login_manager.init_app(app)
     sess.init_app(app)
     csrf.init_app(app)  # Inicializa proteção CSRF
