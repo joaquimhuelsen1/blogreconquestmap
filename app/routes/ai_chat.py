@@ -7,7 +7,18 @@ import random
 import time
 import json
 import os
-from openai import OpenAI  # Importar o cliente OpenAI corretamente
+
+# Importação condicional do OpenAI para funcionar com versões antigas e novas
+try:
+    # Tentar importar o novo cliente (versão >= 1.0.0)
+    from openai import OpenAI
+    USING_NEW_CLIENT = True
+    print("Usando cliente OpenAI moderno (versão >= 1.0.0)")
+except ImportError:
+    # Fallback para o cliente antigo
+    import openai
+    USING_NEW_CLIENT = False
+    print("Usando cliente OpenAI legado (versão < 1.0.0)")
 
 # Configuração: desativar modo de simulação (usar API OpenAI)
 SIMULATION_MODE = False
@@ -177,73 +188,118 @@ def get_openai_response(user_message):
         key_preview = api_key[:4] + "..." if api_key else "None"
         print(f"Usando API key: {key_preview}")
         
-        # Inicializar o cliente com a API key
-        client = OpenAI(api_key=api_key, timeout=60.0)  # Aumentar timeout para 60 segundos
-        print(f"Cliente OpenAI configurado com timeout de 60 segundos")
-        
-        # Criar uma solicitação para a API usando o novo cliente
-        print(f"Enviando solicitação ao modelo gpt-3.5-turbo")
-        
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "Você é um especialista em relacionamentos e reconquista. Seu objetivo é ajudar pessoas a melhorarem seus relacionamentos amorosos e a reconquistar ex-parceiros de maneira saudável. Forneça conselhos práticos, diretos e personalizados para as situações descritas pelo usuário."
-                    },
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=500,
-                temperature=0.7
-            )
-            print(f"Resposta recebida da API com sucesso")
+        # Configuração do cliente baseada na versão disponível
+        if USING_NEW_CLIENT:
+            # Inicializar o cliente com a API key (novo cliente)
+            client = OpenAI(api_key=api_key, timeout=60.0)
+            print(f"Cliente OpenAI moderno configurado com timeout de 60 segundos")
             
-            # Extrair o texto da resposta (formato diferente com o novo cliente)
-            assistant_response = response.choices[0].message.content
+            # Criar uma solicitação para a API usando o novo cliente
+            print(f"Enviando solicitação ao modelo gpt-3.5-turbo (novo cliente)")
             
-            return {
-                "success": True,
-                "message": assistant_response,
-                "debug_info": "Resposta gerada com sucesso pela API OpenAI"
-            }
-        
-        except Exception as api_error:
-            import traceback
-            error_traceback = traceback.format_exc()
-            print(f"ERRO NA CHAMADA DA API: {str(api_error)}")
-            print(f"Traceback detalhado: {error_traceback}")
-            
-            # Tentar identificar o tipo de erro
-            error_type = type(api_error).__name__
-            error_message = str(api_error)
-            
-            print(f"Tipo de erro: {error_type}")
-            print(f"Mensagem de erro: {error_message}")
-            
-            if "timeout" in error_message.lower():
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": "Você é um especialista em relacionamentos e reconquista. Seu objetivo é ajudar pessoas a melhorarem seus relacionamentos amorosos e a reconquistar ex-parceiros de maneira saudável. Forneça conselhos práticos, diretos e personalizados para as situações descritas pelo usuário."
+                        },
+                        {"role": "user", "content": user_message}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                print(f"Resposta recebida da API com sucesso (novo cliente)")
+                
+                # Extrair o texto da resposta (formato diferente com o novo cliente)
+                assistant_response = response.choices[0].message.content
+                
                 return {
-                    "success": False,
-                    "message": "A solicitação atingiu o tempo limite. Por favor, tente novamente.",
-                    "debug_info": f"Timeout error: {error_message}"
+                    "success": True,
+                    "message": assistant_response,
+                    "debug_info": "Resposta gerada com sucesso pela API OpenAI (novo cliente)"
                 }
-            elif "rate limit" in error_message.lower():
+            
+            except Exception as api_error:
+                import traceback
+                error_traceback = traceback.format_exc()
+                print(f"ERRO NA CHAMADA DA API (novo cliente): {str(api_error)}")
+                print(f"Traceback detalhado: {error_traceback}")
+                
+                # Tentar identificar o tipo de erro
+                error_type = type(api_error).__name__
+                error_message = str(api_error)
+                
+                print(f"Tipo de erro: {error_type}")
+                print(f"Mensagem de erro: {error_message}")
+                
+                if "timeout" in error_message.lower():
+                    return {
+                        "success": False,
+                        "message": "A solicitação atingiu o tempo limite. Por favor, tente novamente.",
+                        "debug_info": f"Timeout error: {error_message}"
+                    }
+                elif "rate limit" in error_message.lower():
+                    return {
+                        "success": False,
+                        "message": "Estamos recebendo muitas solicitações no momento. Por favor, tente novamente em alguns minutos.",
+                        "debug_info": f"Rate limit error: {error_message}"
+                    }
+                elif "authentication" in error_message.lower() or "api key" in error_message.lower():
+                    return {
+                        "success": False,
+                        "message": "Erro de autenticação com o serviço de IA. Nossa equipe foi notificada.",
+                        "debug_info": f"Auth error: {error_message}"
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": get_fallback_response(error_message),
+                        "debug_info": f"API error: {error_message}"
+                    }
+        else:
+            # Configurar API key para o cliente antigo
+            openai.api_key = api_key
+            print(f"API OpenAI legada configurada")
+            
+            # Criar uma solicitação usando o cliente antigo
+            print(f"Enviando solicitação ao modelo gpt-3.5-turbo (cliente legado)")
+            
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": "Você é um especialista em relacionamentos e reconquista. Seu objetivo é ajudar pessoas a melhorarem seus relacionamentos amorosos e a reconquistar ex-parceiros de maneira saudável. Forneça conselhos práticos, diretos e personalizados para as situações descritas pelo usuário."
+                        },
+                        {"role": "user", "content": user_message}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                print(f"Resposta recebida da API com sucesso (cliente legado)")
+                
+                # Extrair o texto da resposta (formato do cliente antigo)
+                assistant_response = response.choices[0].message.content
+                
                 return {
-                    "success": False,
-                    "message": "Estamos recebendo muitas solicitações no momento. Por favor, tente novamente em alguns minutos.",
-                    "debug_info": f"Rate limit error: {error_message}"
+                    "success": True,
+                    "message": assistant_response,
+                    "debug_info": "Resposta gerada com sucesso pela API OpenAI (cliente legado)"
                 }
-            elif "authentication" in error_message.lower() or "api key" in error_message.lower():
+                
+            except Exception as api_error:
+                import traceback
+                error_traceback = traceback.format_exc()
+                print(f"ERRO NA CHAMADA DA API (cliente legado): {str(api_error)}")
+                print(f"Traceback detalhado: {error_traceback}")
+                
                 return {
                     "success": False,
-                    "message": "Erro de autenticação com o serviço de IA. Nossa equipe foi notificada.",
-                    "debug_info": f"Auth error: {error_message}"
-                }
-            else:
-                return {
-                    "success": False,
-                    "message": get_fallback_response(error_message),
-                    "debug_info": f"API error: {error_message}"
+                    "message": get_fallback_response(str(api_error)),
+                    "debug_info": f"API error (cliente legado): {str(api_error)}"
                 }
     
     except Exception as e:
