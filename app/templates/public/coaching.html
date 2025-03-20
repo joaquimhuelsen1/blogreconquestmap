@@ -5,122 +5,112 @@
 {% block extra_css %}
 <style>
     .quiz-container {
-        max-width: 750px;
-        margin: 0 auto;
+        max-width: 800px;
+        margin: 3rem auto;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         background-color: #fff;
-        border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
     .quiz-header {
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 2rem;
     }
     
     .quiz-header h1 {
-        font-size: 2.2rem;
-        color: #333;
-        margin-bottom: 15px;
+        color: #C60000;
+        margin-bottom: 1rem;
     }
     
-    .quiz-header p {
-        font-size: 1rem;
-        color: #666;
+    .quiz-form label {
+        font-weight: 500;
     }
     
-    .btn-quiz {
-        background-color: #4a6fdc;
-        border: none;
-        padding: 10px 30px;
-        font-weight: 600;
+    .quiz-form .btn-primary {
+        background-color: #C60000;
+        border-color: #C60000;
     }
     
-    .btn-quiz:hover {
-        background-color: #3a5fc9;
+    .quiz-form .btn-primary:hover {
+        background-color: #a50000;
+        border-color: #a50000;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container my-5">
+<div class="container">
     <div class="quiz-container">
         <div class="quiz-header">
             <h1>Reconquest Test</h1>
-            <p>Answer the questions below honestly to get a personalized analysis of your situation.</p>
+            <p class="lead">Answer the questions below honestly to get a personalized analysis of your situation.</p>
         </div>
         
-        <form id="reconquistaForm">
+        <form id="quiz-form" class="quiz-form">
             <div class="mb-4">
-                <label for="nome" class="form-label">Full Name</label>
-                <input type="text" class="form-control" id="nome" name="nome" required>
+                <label for="fullName" class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="fullName" name="fullName" required>
             </div>
             
             <div class="mb-4">
-                <label for="idade" class="form-label">Your Age</label>
-                <input type="number" class="form-control" id="idade" name="idade" min="18" required>
+                <label for="age" class="form-label">Age</label>
+                <input type="number" class="form-control" id="age" name="age" min="18" max="100" required>
             </div>
             
             <div class="mb-4">
-                <label for="nomeEx" class="form-label">Ex-partner's Name</label>
-                <input type="text" class="form-control" id="nomeEx" name="nomeEx" required>
+                <label for="exName" class="form-label">Ex's Name</label>
+                <input type="text" class="form-control" id="exName" name="exName" required>
             </div>
             
             <div class="mb-4">
-                <label for="idadeEx" class="form-label">Ex-partner's Age</label>
-                <input type="number" class="form-control" id="idadeEx" name="idadeEx" min="18" required>
+                <label for="exAge" class="form-label">Ex's Age</label>
+                <input type="number" class="form-control" id="exAge" name="exAge" min="18" max="100" required>
             </div>
             
             <div class="mb-4">
-                <label for="tempoRelacionamento" class="form-label">How long did your relationship last? (years and months)</label>
-                <input type="text" class="form-control" id="tempoRelacionamento" name="tempoRelacionamento" required>
+                <label for="relationshipLength" class="form-label">How long were you together:</label>
+                <input type="text" class="form-control" id="relationshipLength" name="relationshipLength" required>
             </div>
             
             <div class="mb-4">
-                <label for="tempoTermino" class="form-label">How long since the breakup? (days, months or years)</label>
-                <input type="text" class="form-control" id="tempoTermino" name="tempoTermino" required>
+                <label for="timeSinceBreakup" class="form-label">How long have you been apart:</label>
+                <input type="text" class="form-control" id="timeSinceBreakup" name="timeSinceBreakup" required>
             </div>
             
             <div class="mb-4">
-                <label for="motivoTermino" class="form-label">Main reason for the breakup</label>
-                <textarea class="form-control" id="motivoTermino" name="motivoTermino" rows="3" required></textarea>
+                <label for="breakupReason" class="form-label">Main reason for the breakup:</label>
+                <textarea class="form-control" id="breakupReason" name="breakupReason" rows="3" required></textarea>
             </div>
             
             <div class="mb-4">
-                <label for="email" class="form-label">Your Email</label>
+                <label for="email" class="form-label">Contact email:</label>
                 <input type="email" class="form-control" id="email" name="email" required>
             </div>
             
             <div class="mb-4">
-                <label class="form-label">Are you a student of the Reconquest Map?</label>
+                <label class="form-label">Are you a Reconquest Map student?</label>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="alunoMapa" id="alunoMapaSim" value="true">
-                    <label class="form-check-label" for="alunoMapaSim">
+                    <input class="form-check-input" type="radio" name="isStudent" id="isStudentYes" value="Yes" required>
+                    <label class="form-check-label" for="isStudentYes">
                         Yes
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="alunoMapa" id="alunoMapaNao" value="false" checked>
-                    <label class="form-check-label" for="alunoMapaNao">
+                    <input class="form-check-input" type="radio" name="isStudent" id="isStudentNo" value="No">
+                    <label class="form-check-label" for="isStudentNo">
                         No
                     </label>
                 </div>
             </div>
             
             <div class="text-center mt-5">
-                <button type="submit" class="btn btn-primary btn-lg btn-quiz" id="submitBtn">Submit Test</button>
-                <div class="spinner-border text-primary mt-3 d-none" role="status" id="loadingSpinner">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+                <button type="submit" class="btn btn-lg btn-primary px-5">Submit Test</button>
             </div>
         </form>
         
-        <div class="alert alert-success mt-4 d-none" id="successMessage">
-            Test submitted successfully! We will analyze your answers and contact you by email.
-        </div>
-        
-        <div class="alert alert-danger mt-4 d-none" id="errorMessage">
-            There was an error submitting your test. Please try again later.
+        <div id="quiz-results" class="mt-5 p-4 bg-light rounded text-center" style="display: none;">
+            <!-- Content inserted via JavaScript -->
         </div>
     </div>
 </div>
@@ -129,85 +119,96 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('reconquistaForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const successMessage = document.getElementById('successMessage');
-        const errorMessage = document.getElementById('errorMessage');
+        const quizForm = document.getElementById('quiz-form');
+        const quizResults = document.getElementById('quiz-results');
         
-        // Form validation
-        function validateForm() {
-            let valid = true;
-            const requiredFields = form.querySelectorAll('[required]');
-            
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    valid = false;
-                    field.classList.add('is-invalid');
-                } else {
-                    field.classList.remove('is-invalid');
-                }
-            });
-            
-            return valid;
-        }
-        
-        // Form submission
-        form.addEventListener('submit', function(e) {
+        quizForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            if (!validateForm()) {
+            // Check if all fields have been filled
+            const fullName = document.getElementById('fullName').value;
+            const age = document.getElementById('age').value;
+            const exName = document.getElementById('exName').value;
+            const exAge = document.getElementById('exAge').value;
+            const relationshipLength = document.getElementById('relationshipLength').value;
+            const timeSinceBreakup = document.getElementById('timeSinceBreakup').value;
+            const breakupReason = document.getElementById('breakupReason').value;
+            const email = document.getElementById('email').value;
+            const isStudent = document.querySelector('input[name="isStudent"]:checked');
+            
+            if (!fullName || !age || !exName || !exAge || !relationshipLength || 
+                !timeSinceBreakup || !breakupReason || !email || !isStudent) {
+                alert('Please fill in all fields of the form.');
                 return;
             }
             
-            // Show loading spinner
-            submitBtn.disabled = true;
-            loadingSpinner.classList.remove('d-none');
-            successMessage.classList.add('d-none');
-            errorMessage.classList.add('d-none');
-            
-            // Prepare form data
+            // Prepare data for submission
             const formData = {
-                nome: document.getElementById('nome').value,
-                idade: document.getElementById('idade').value,
-                nomeEx: document.getElementById('nomeEx').value,
-                idadeEx: document.getElementById('idadeEx').value,
-                tempoRelacionamento: document.getElementById('tempoRelacionamento').value,
-                tempoTermino: document.getElementById('tempoTermino').value,
-                motivoTermino: document.getElementById('motivoTermino').value,
-                email: document.getElementById('email').value,
-                alunoMapa: document.querySelector('input[name="alunoMapa"]:checked').value,
-                origem: 'teste_site'
+                fullName, 
+                age, 
+                exName, 
+                exAge, 
+                relationshipLength, 
+                timeSinceBreakup, 
+                breakupReason, 
+                email, 
+                isStudent: isStudent.value
             };
             
-            // Send data to webhook
-            fetch('https://hook.us1.make.com/dbe2w0qb61zn4zl0s5udfkhthckl6bq6', {
+            console.log("Sending data for analysis:", formData);
+            
+            // Show loading indicator
+            const submitButton = quizForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            
+            // Send data to backend
+            fetch('{{ url_for("main.enviar_teste") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify(formData)
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error('Failed to send data');
                 }
-                return response.json();
+                return response.json().catch(() => ({}));
             })
             .then(data => {
-                // Show success message
-                successMessage.classList.remove('d-none');
-                form.reset();
+                console.log('Data received:', data);
+                
+                // Hide form and show confirmation message
+                quizForm.style.display = 'none';
+                
+                // Display confirmation message
+                quizResults.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        <h3 class="my-4">Thank you for your submission!</h3>
+                        <div class="alert alert-success mb-4">
+                            <p>We have received your answers and will analyze them carefully.</p>
+                            <p class="mb-0">We will contact you through the email <strong>${email}</strong> with your personalized analysis.</p>
+                        </div>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg mt-3">Return to homepage</a>
+                    </div>
+                `;
+                
+                quizResults.style.display = 'block';
+                
+                // Scroll to results
+                quizResults.scrollIntoView({behavior: 'smooth'});
             })
             .catch(error => {
-                // Show error message
-                errorMessage.classList.remove('d-none');
                 console.error('Error:', error);
-            })
-            .finally(() => {
-                // Hide loading spinner
-                submitBtn.disabled = false;
-                loadingSpinner.classList.add('d-none');
+                alert('An error occurred while submitting the test. Please try again.');
+                
+                // Restore button
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
             });
         });
     });
