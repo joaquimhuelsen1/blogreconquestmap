@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User
-from app.forms import LoginForm, RegistrationForm, ProfileUpdateForm
+from app.forms import LoginForm, RegistrationForm, ProfileUpdateForm, PasswordChangeForm
 from urllib.parse import urlsplit
 
 # Blueprint de autenticação
@@ -48,19 +48,53 @@ def register():
 @auth_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    form = ProfileUpdateForm(original_username=current_user.username, original_email=current_user.email)
-    
-    if form.validate_on_submit():
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        current_user.age = form.age.data
+    try:
+        form = ProfileUpdateForm(original_username=current_user.username, original_email=current_user.email)
+        password_form = PasswordChangeForm()
         
-        db.session.commit()
-        flash('Your profile has been updated!', 'success')
+        if form.validate_on_submit():
+            current_user.username = form.username.data
+            current_user.email = form.email.data
+            current_user.age = form.age.data
+            
+            db.session.commit()
+            flash('Your profile has been updated!', 'success')
+            return redirect(url_for('auth.profile'))
+        elif request.method == 'GET':
+            form.username.data = current_user.username
+            form.email.data = current_user.email
+            form.age.data = current_user.age
+        
+        return render_template('auth/profile.html', form=form, password_form=password_form)
+    except Exception as e:
+        print(f"ERROR in profile route: {str(e)}")
+        db.session.rollback()
+        flash('An error occurred while updating your profile. Please try again.', 'danger')
+        return redirect(url_for('main.index'))
+
+@auth_bp.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    try:
+        form = PasswordChangeForm()
+        
+        if form.validate_on_submit():
+            # Verificar se a senha atual está correta
+            if current_user.check_password(form.current_password.data):
+                # Atualizar a senha
+                current_user.set_password(form.new_password.data)
+                db.session.commit()
+                flash('Your password has been updated successfully!', 'success')
+            else:
+                flash('Current password is incorrect.', 'danger')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"Error in {field}: {error}", 'danger')
+        
         return redirect(url_for('auth.profile'))
-    elif request.method == 'GET':
-        form.username.data = current_user.username
-        form.email.data = current_user.email
-        form.age.data = current_user.age
-    
-    return render_template('auth/profile.html', form=form) 
+    except Exception as e:
+        print(f"ERROR in change_password route: {str(e)}")
+        db.session.rollback()
+        flash('An error occurred while updating your password. Please try again.', 'danger')
+        return redirect(url_for('auth.profile')) 

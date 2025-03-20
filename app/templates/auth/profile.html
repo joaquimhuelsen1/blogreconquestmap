@@ -56,6 +56,47 @@
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
+                
+                <!-- Formulário de alteração de senha -->
+                <hr class="my-4">
+                <h5>Change Password</h5>
+                <form method="POST" action="{{ url_for('auth.change_password') }}">
+                    {% if password_form %}
+                        {{ password_form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ password_form.current_password.label(class="form-label") }}
+                            {{ password_form.current_password(class="form-control") }}
+                            {% for error in password_form.current_password.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ password_form.new_password.label(class="form-label") }}
+                            {{ password_form.new_password(class="form-control") }}
+                            {% for error in password_form.new_password.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ password_form.confirm_password.label(class="form-label") }}
+                            {{ password_form.confirm_password(class="form-control") }}
+                            {% for error in password_form.confirm_password.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid">
+                            {{ password_form.submit(class="btn btn-warning") }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            Password change form is temporarily unavailable. Please try again later.
+                        </div>
+                    {% endif %}
+                </form>
             </div>
             <div class="card-footer">
                 <div class="text-center mt-2">
