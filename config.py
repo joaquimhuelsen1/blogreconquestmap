@@ -45,20 +45,21 @@ class Config:
                     user = pooler_user
                 
                 # Reconstruir a URL com o host correto do pooler e usuário modificado
-                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/{dbname}{params}"
+                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}{params}"
                 print("URL do Supabase corrigida para usar o host correto do pooler")
             
         # Adicionar SSL mode se necessário
         if '?' not in DATABASE_URL:
-            DATABASE_URL += '?sslmode=prefer'
+            DATABASE_URL += '?sslmode=require'
         elif 'sslmode=' not in DATABASE_URL:
-            DATABASE_URL += '&sslmode=prefer'
+            DATABASE_URL += '&sslmode=require'
         
         # Garantir que os parâmetros de conexão estão completos
         ssl_params = {
-            'sslmode': 'prefer',
+            'sslmode': 'require',
             'connect_timeout': '15',
-            'application_name': 'blog_app'
+            'application_name': 'blog_app',
+            'sslrootcert': 'None'  # Desabilitar verificação de certificado
         }
         
         # Adicionar os parâmetros que não existem na URL
@@ -93,7 +94,7 @@ class Config:
         
         if POSTGRES_CONFIGURED:
             # Formar a URL de conexão com o PostgreSQL
-            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:{SUPABASE_DB_PORT}/{SUPABASE_DB_NAME}?sslmode=prefer&connect_timeout=15&application_name=blog_app'
+            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=require&connect_timeout=15&application_name=blog_app&sslrootcert=None'
             print(f"Usando conexão PostgreSQL via variáveis separadas: {SQLALCHEMY_DATABASE_URI.split('@')[0]}@****")
         else:
             # Fallback para SQLite

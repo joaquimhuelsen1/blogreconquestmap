@@ -162,20 +162,21 @@ def create_app():
                     user = pooler_user
                 
                 # Reconstruir a URL com o host correto do pooler
-                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/{dbname}{params}"
+                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}{params}"
                 logger.info("URL do Supabase corrigida em app/__init__.py para usar o host correto do pooler")
             
-            # Garantir que SSL está habilitado com modo "prefer"
+            # Garantir que SSL está habilitado com modo "require"
             if '?' not in app.config['SQLALCHEMY_DATABASE_URI']:
-                app.config['SQLALCHEMY_DATABASE_URI'] += '?sslmode=prefer'
+                app.config['SQLALCHEMY_DATABASE_URI'] += '?sslmode=require'
             elif 'sslmode=' not in app.config['SQLALCHEMY_DATABASE_URI']:
-                app.config['SQLALCHEMY_DATABASE_URI'] += '&sslmode=prefer'
+                app.config['SQLALCHEMY_DATABASE_URI'] += '&sslmode=require'
             
             # Adicionar outros parâmetros de conexão
             ssl_params = {
-                'sslmode': 'prefer',
+                'sslmode': 'require',
                 'connect_timeout': '15',
-                'application_name': 'blog_app'
+                'application_name': 'blog_app',
+                'sslrootcert': 'None'
             }
             
             # Adicionar parâmetros que não existem na URL
@@ -191,14 +192,15 @@ def create_app():
             
             # Diagnosticar conectividade com o host correto
             host = "aws-0-us-west-1.pooler.supabase.com"
-            logger.info(f"Diagnosticando conectividade com host do pooler: {host}")
-            diag_results = diagnose_connection(host, 5432)
+            port = 6543
+            logger.info(f"Diagnosticando conectividade com host do pooler: {host}:{port}")
+            diag_results = diagnose_connection(host, port)
             if diag_results["ip_resolved"]:
                 logger.info(f"✅ Host do pooler resolvido: {host} -> {diag_results['ip_resolved']}")
                 if diag_results["can_connect"]:
-                    logger.info(f"✅ Conexão TCP possível com o host do pooler")
+                    logger.info(f"✅ Conexão TCP possível com o host do pooler na porta {port}")
                 else:
-                    logger.warning(f"⚠️ Host resolvido mas conexão TCP não é possível - verifique firewall")
+                    logger.warning(f"⚠️ Host resolvido mas conexão TCP não é possível na porta {port} - verifique firewall")
             else:
                 logger.error(f"❌ Não foi possível resolver o host do pooler: {host}")
     
