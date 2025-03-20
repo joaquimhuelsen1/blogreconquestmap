@@ -6,9 +6,49 @@ Este script instala as dependências necessárias antes de inicializar o banco.
 import os
 import sys
 import subprocess
+import glob
 
 # Configurando o ambiente
 os.environ['FLASK_ENV'] = 'production'
+print("Verificando estrutura do projeto...")
+
+# Verifica a estrutura de diretórios
+current_dir = os.getcwd()
+print(f"Diretório atual: {current_dir}")
+
+# Lista os diretórios
+print("Estrutura de diretórios:")
+for root, dirs, files in os.walk(".", topdown=True, maxdepth=2):
+    for dir_name in dirs:
+        print(f"- {os.path.join(root, dir_name)}")
+
+# Verifica se a pasta app existe
+if not os.path.exists('app'):
+    print("Pasta 'app' não encontrada. Procurando em outro local...")
+    # Procura por potenciais locais da pasta app
+    app_dirs = glob.glob("*/app") + glob.glob("*/*/app")
+    if app_dirs:
+        parent_dir = os.path.dirname(app_dirs[0])
+        print(f"Pasta app encontrada em: {app_dirs[0]}")
+        os.chdir(parent_dir)
+        print(f"Mudando para diretório: {os.getcwd()}")
+    else:
+        print("ERRO: Pasta 'app' não encontrada em nenhum lugar!")
+        sys.exit(1)
+
+# Verifica se app/models existe
+if not os.path.exists('app/models'):
+    print("ERRO: Pasta 'app/models' não encontrada!")
+    sys.exit(1)
+
+# Verifica se __init__.py existe nos diretórios necessários
+for dir_path in ['app', 'app/models']:
+    init_file = os.path.join(dir_path, '__init__.py')
+    if not os.path.exists(init_file):
+        print(f"Criando arquivo {init_file}")
+        with open(init_file, 'w') as f:
+            f.write("# Arquivo de inicialização para estrutura de pacotes Python\n")
+
 print("Instalando dependências...")
 
 # Lista de pacotes essenciais
@@ -36,6 +76,15 @@ for package in packages:
         print(f"Erro ao instalar {package}, tentando continuar...")
 
 print("Dependências instaladas! Inicializando banco de dados...")
+
+# Verifica se user.py existe em app/models
+if not os.path.exists('app/models/user.py'):
+    print("ERRO: Arquivo 'app/models/user.py' não encontrado!")
+    sys.exit(1)
+
+# Adiciona o diretório atual ao path do Python
+sys.path.insert(0, os.getcwd())
+print(f"Python path: {sys.path}")
 
 # Agora executamos a inicialização do banco de dados
 try:
@@ -88,4 +137,6 @@ try:
     
 except Exception as e:
     print(f"Erro ao inicializar o banco de dados: {str(e)}")
+    import traceback
+    print(traceback.format_exc())
     sys.exit(1) 
