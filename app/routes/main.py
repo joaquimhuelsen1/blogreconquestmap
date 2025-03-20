@@ -45,36 +45,29 @@ def index():
             logger.info(f"String de conexão BD (parcial): {db_uri.split('@')[0].split(':')[0]}:***@{db_uri.split('@')[1] if '@' in db_uri else '(formato desconhecido)'}")
         except Exception as db_config_err:
             logger.error(f"Erro ao verificar config BD: {str(db_config_err)}")
-            
-        # Registrar informações da sessão
-        logger.info(f"Cookie de sessão presente: {'session' in request.cookies}")
-        logger.info(f"CSRF token em sessão: {session.get('csrf_token', 'Não encontrado')}")
         
         # Verificar quantidade de posts (antes da paginação)
         try:
-            with current_app.app_context():
-                total_posts = Post.query.count()
-                logger.info(f"Total de posts no banco de dados: {total_posts}")
-                
-                # Listar IDs dos primeiros 5 posts
-                first_posts = Post.query.order_by(Post.created_at.desc()).limit(5).all()
-                post_ids = [p.id for p in first_posts]
-                logger.info(f"IDs dos primeiros posts: {post_ids}")
-                
-                # Consultar posts paginados
-                logger.info("Executando consulta paginada de posts...")
-                posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5)
-                
-                logger.info(f"Paginação: page={posts.page}, per_page={posts.per_page}, total={posts.total}, pages={posts.pages}")
-                logger.info(f"Itens retornados: {len(posts.items)}")
-                
-                # Renderizar template
-                logger.info("Renderizando template 'public/index.html'")
-                return render_template('public/index.html', posts=posts)
+            # Remover uso de with app_context() desnecessário que pode estar causando o erro
+            total_posts = Post.query.count()
+            logger.info(f"Total de posts no banco de dados: {total_posts}")
+            
+            # Consultar posts paginados
+            logger.info("Executando consulta paginada de posts...")
+            posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5)
+            
+            logger.info(f"Paginação: page={posts.page}, per_page={posts.per_page}, total={posts.total}, pages={posts.pages}")
+            logger.info(f"Itens retornados: {len(posts.items)}")
+            
+            # Renderizar template
+            logger.info("Renderizando template 'public/index.html'")
+            return render_template('public/index.html', posts=posts)
         except Exception as query_err:
             logger.error(f"ERRO NA CONSULTA: {str(query_err)}")
             logger.exception("Detalhes do erro na consulta:")
-            raise  # Re-lançar para ser capturado pelo try/except externo
+            # Tentar retornar a página sem posts
+            logger.info("Tentando renderizar o template sem posts")
+            return render_template('public/index.html', posts=None)
             
     except Exception as e:
         # Imprimir erro detalhado para debug

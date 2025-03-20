@@ -317,8 +317,35 @@ def create_app():
             response.headers['Content-Type'] = 'application/json'
             return response, 500
         
-        # Página de erro customizada
-        return render_template('errors/500.html', error=str(e)), 500
+        # Criar uma resposta HTML simplificada para evitar erros cíclicos
+        # em caso de falha na renderização do template
+        try:
+            return render_template('errors/500.html', error=str(e)), 500
+        except Exception as template_error:
+            logger.error(f"❌ ERRO AO RENDERIZAR TEMPLATE DE ERRO: {str(template_error)}")
+            # Resposta HTML mínima sem depender de templates
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Erro interno - Blog Reconquista</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; }}
+                    h1 {{ font-size: 48px; margin-bottom: 10px; }}
+                    .container {{ max-width: 800px; margin: 0 auto; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>500</h1>
+                    <h2>Erro interno do servidor</h2>
+                    <p>Ocorreu um erro inesperado. Nossa equipe foi notificada.</p>
+                    <p><a href="/">Voltar para a página inicial</a></p>
+                </div>
+            </body>
+            </html>
+            """
+            return html, 500
     
     # Registrar blueprints - Verificar se o módulo ou o pacote existe
     try:
@@ -328,6 +355,7 @@ def create_app():
         from app.routes.admin import admin_bp
         from app.routes.user import user_bp
         from app.routes.temporary import temp_bp  # Import the temporary blueprint
+        from app.routes.ai_chat import ai_chat_bp  # Import the AI chat blueprint
         
         # Register blueprints
         app.register_blueprint(main_bp)
@@ -335,6 +363,7 @@ def create_app():
         app.register_blueprint(admin_bp, url_prefix='/admin')
         app.register_blueprint(user_bp, url_prefix='/user')
         app.register_blueprint(temp_bp, url_prefix='/temp')  # Register the temporary blueprint
+        app.register_blueprint(ai_chat_bp)  # Register the AI chat blueprint
         logger.info("✅ Blueprints registrados da pasta app/routes/")
     except ImportError as e:
         logger.warning(f"Erro ao importar do pacote app.routes: {str(e)}")

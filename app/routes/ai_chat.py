@@ -24,7 +24,7 @@ except ImportError:
 SIMULATION_MODE = False
 
 # Blueprint para IA de relacionamento
-ai_chat_bp = Blueprint('ai_chat', __name__, url_prefix='/ai_chat')
+ai_chat_bp = Blueprint('ai_chat', __name__)
 
 # Implementar função de fallback para caso de erro na API
 def get_fallback_response(error_message):
