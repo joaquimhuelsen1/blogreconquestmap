@@ -9,6 +9,7 @@ from flask import render_template, current_app
 
 print("Iniciando aplicação de desenvolvimento...")
 app = create_app()
+application = app  # Para compatibilidade com gunicorn e Railway
 
 # Empurrar o contexto da aplicação para o Flask
 ctx = app.app_context()
