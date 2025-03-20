@@ -31,10 +31,20 @@ class Config:
         if '.supabase.co' in DATABASE_URL and 'pooler.supabase.com' not in DATABASE_URL:
             # Extrair user, password e o resto da URL
             import re
-            match = re.match(r'postgresql://([^:]+):([^@]+)@[^/]+/([^?]+)(.*)', DATABASE_URL)
+            match = re.match(r'postgresql://([^:]+):([^@]+)@([^\/]+)/([^?]+)(.*)', DATABASE_URL)
             if match:
-                user, password, dbname, params = match.groups()
-                # Reconstruir a URL com o host correto do pooler
+                user, password, host, dbname, params = match.groups()
+                
+                # Transformar o formato do nome de usuário para incluir o ID do projeto
+                # Se o host contém o ID do projeto (ex: db.mqyasfpbtcdrxccuhchv.supabase.co)
+                host_match = re.search(r'\.([a-z0-9]+)\.supabase\.co', host)
+                if host_match and user == 'postgres':
+                    project_id = host_match.group(1)
+                    pooler_user = f"postgres.{project_id}"
+                    print(f"Usuário modificado para formato pooler: {user} -> {pooler_user}")
+                    user = pooler_user
+                
+                # Reconstruir a URL com o host correto do pooler e usuário modificado
                 DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/{dbname}{params}"
                 print("URL do Supabase corrigida para usar o host correto do pooler")
             

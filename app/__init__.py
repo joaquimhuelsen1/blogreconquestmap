@@ -147,10 +147,20 @@ def create_app():
         
         # Se a URL contém um host do Supabase mas não o host correto do pooler
         if '.supabase.co' in db_uri and 'pooler.supabase.com' not in db_uri:
-            # Extrair user, password e o resto da URL
-            match = re.match(r'postgresql://([^:]+):([^@]+)@[^/]+/([^?]+)(.*)', db_uri)
+            # Extrair user, password, host e o resto da URL
+            match = re.match(r'postgresql://([^:]+):([^@]+)@([^\/]+)/([^?]+)(.*)', db_uri)
             if match:
-                user, password, dbname, params = match.groups()
+                user, password, host, dbname, params = match.groups()
+                
+                # Transformar o formato do nome de usuário para incluir o ID do projeto
+                # Se o host contém o ID do projeto (ex: db.mqyasfpbtcdrxccuhchv.supabase.co)
+                host_match = re.search(r'\.([a-z0-9]+)\.supabase\.co', host)
+                if host_match and user == 'postgres':
+                    project_id = host_match.group(1)
+                    pooler_user = f"postgres.{project_id}"
+                    logger.info(f"Usuário modificado para formato pooler: {user} -> {pooler_user}")
+                    user = pooler_user
+                
                 # Reconstruir a URL com o host correto do pooler
                 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/{dbname}{params}"
                 logger.info("URL do Supabase corrigida em app/__init__.py para usar o host correto do pooler")
