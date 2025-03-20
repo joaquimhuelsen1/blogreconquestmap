@@ -20,11 +20,40 @@ except ImportError:
     USING_NEW_CLIENT = False
     print("Usando cliente OpenAI legado (versão < 1.0.0)")
 
-# Configuração: desativar modo de simulação (usar API OpenAI)
-SIMULATION_MODE = False
+# Configuração: ativar modo de simulação para não depender da API OpenAI
+SIMULATION_MODE = True
 
 # Blueprint para IA de relacionamento
 ai_chat_bp = Blueprint('ai_chat', __name__)
+
+# Função para depurar variáveis de ambiente relacionadas à OpenAI
+def debug_environment_vars():
+    """Imprime informações de debug sobre as variáveis de ambiente relacionadas à OpenAI"""
+    print("\n==== DEBUG VARIÁVEIS DE AMBIENTE OPENAI ====")
+    # Verificar se as variáveis de ambiente estão definidas
+    openai_api_key_env = os.environ.get('OPENAI_API_KEY', 'Não definida')
+    # Mascarar a chave para o log
+    key_status = "Definida" if openai_api_key_env != 'Não definida' else "Não definida"
+    key_length = len(openai_api_key_env) if openai_api_key_env != 'Não definida' else 0
+    key_preview = openai_api_key_env[:4] + "..." if key_length > 4 else ""
+    
+    print(f"OPENAI_API_KEY no ambiente: {key_status}")
+    print(f"Comprimento da OPENAI_API_KEY no ambiente: {key_length} caracteres")
+    if key_preview:
+        print(f"Primeiros caracteres: {key_preview}")
+    
+    # Verificar a configuração na aplicação
+    app_api_key = current_app.config.get('OPENAI_API_KEY', 'Não definida na configuração')
+    app_key_status = "Definida" if app_api_key != 'Não definida na configuração' else "Não definida"
+    app_key_length = len(app_api_key) if app_api_key != 'Não definida na configuração' else 0
+    app_key_preview = app_api_key[:4] + "..." if app_key_length > 4 else ""
+    
+    print(f"OPENAI_API_KEY na config da aplicação: {app_key_status}")
+    print(f"Comprimento da OPENAI_API_KEY na config: {app_key_length} caracteres")
+    if app_key_preview:
+        print(f"Primeiros caracteres: {app_key_preview}")
+    
+    print("==== FIM DEBUG VARIÁVEIS DE AMBIENTE ====\n")
 
 # Implementar função de fallback para caso de erro na API
 def get_fallback_response(error_message):
@@ -35,6 +64,14 @@ def get_fallback_response(error_message):
 @ai_chat_bp.route('/ia-relacionamento', methods=['GET', 'POST'])
 def ia_relacionamento():
     """Página de IA de Relacionamento"""
+    # Depurar variáveis de ambiente relacionadas à OpenAI
+    if current_app.debug:
+        debug_environment_vars()
+        
+    # Detectar se estamos em ambiente local
+    is_local = 'localhost' in request.host or '127.0.0.1' in request.host
+    print(f"Executando em ambiente local: {is_local}")
+    
     # Verificar se o usuário está autenticado e é premium
     can_access_ai = current_user.is_authenticated and (current_user.is_premium or current_user.is_admin)
     
@@ -107,10 +144,33 @@ def ia_relacionamento():
             
             try:
                 if SIMULATION_MODE:
-                    # Resposta fixa para teste
-                    assistant_response = "Obrigado por sua mensagem! Esta é uma resposta simulada (modo de teste)."
-                    print("Usando modo de simulação - resposta fixa gerada")
+                    # Adicionar simulação mais realista
+                    print("Modo de simulação ativado - gerando resposta simulada")
+                    time.sleep(0.5)  # Pequeno delay para simular processamento
+                    
+                    # Gerar resposta mais realista baseada na mensagem do usuário
+                    respostas_simuladas = [
+                        f"Obrigado por compartilhar isso comigo. Com base no que você descreveu sobre '{user_message[:20]}...', recomendo que você mantenha uma comunicação clara e honesta. A reconquista de um relacionamento exige paciência e compreensão mútua.",
+                        f"Considerando sua situação com '{user_message[:15]}...', acho importante você focar primeiro em seu próprio desenvolvimento pessoal. Muitas vezes, quando nos tornamos a melhor versão de nós mesmos, naturalmente atraímos as pessoas de volta.",
+                        f"Analisando o que você disse sobre '{user_message[:20]}...', sugiro dar espaço para que ambos possam refletir. O tempo é um elemento importante em qualquer processo de reconquista, pois permite que as emoções se acalmem e a razão prevaleça.",
+                        f"Baseado na sua mensagem sobre '{user_message[:15]}...', recomendo estabelecer limites saudáveis. É importante manter o respeito mútuo mesmo após um término, e isso demonstra maturidade emocional.",
+                        f"Sua situação com '{user_message[:20]}...' é comum em muitos relacionamentos. Lembre-se que a reconquista não deve ser forçada - deve acontecer naturalmente e com consentimento mútuo."
+                    ]
+                    
+                    # Selecionar uma resposta aleatória
+                    assistant_response = random.choice(respostas_simuladas)
+                    print(f"Resposta simulada gerada: {assistant_response[:50]}...")
                 else:
+                    # Imprimir informações sobre a configuração da API key
+                    api_key_status = "CONFIGURADA" if current_app.config.get('OPENAI_API_KEY') else "NÃO CONFIGURADA"
+                    print(f"Status da API Key: {api_key_status}")
+                    
+                    # Se estiver em modo de desenvolvimento, mostrar mais detalhes
+                    if current_app.debug:
+                        api_key = current_app.config.get('OPENAI_API_KEY', '')
+                        print(f"API Key (primeiros 4 caracteres): {api_key[:4] if api_key else 'Vazia'}")
+                        print(f"Comprimento da API Key: {len(api_key) if api_key else 0} caracteres")
+                    
                     # Usar OpenAI API para obter resposta, enviando APENAS a mensagem atual
                     api_response = get_openai_response(user_message)
                     
@@ -179,19 +239,47 @@ def get_openai_response(user_message):
     
     try:
         # Obter chaves da configuração da aplicação
-        api_key = current_app.config['OPENAI_API_KEY']
+        api_key = current_app.config.get('OPENAI_API_KEY')
         
         if not api_key:
+            print("ERRO: API key não configurada")
             raise ValueError("Chave da API OpenAI não configurada. Verifique as variáveis de ambiente.")
+        
+        # Limpar a chave da API para garantir que não tenha quebras de linha ou texto adicional
+        if '\n' in api_key:
+            print("AVISO: Encontrada quebra de linha na chave da API. Limpando...")
+            # Pegar apenas a primeira linha (a chave real)
+            api_key = api_key.split('\n')[0].strip()
+        
+        # Verificar e remover prefixos ou sufixos que não deveriam estar lá
+        if ' ' in api_key:
+            print("AVISO: Espaços encontrados na chave da API. Limpando...")
+            api_key = api_key.strip()
+            
+        # Verificar padrão básico da chave OpenAI
+        if api_key.startswith('sk-'):
+            # Provavelmente uma chave válida
+            pass
+        else:
+            # Tentar extrair a chave se ela estiver em um formato como "OPENAI_API_KEY=sk-..."
+            if '=' in api_key and 'sk-' in api_key:
+                print("AVISO: Formato incorreto na chave da API. Tentando extrair...")
+                api_key = api_key.split('sk-')[1]
+                api_key = 'sk-' + api_key.split()[0].strip()
+        
+        # Verificar se a API key tem uma estrutura válida (formato básico)
+        if not api_key.startswith(('sk-', 'org-')):
+            print(f"AVISO: A API key não parece estar no formato correto")
         
         # Log detalhado da API key (primeiros 4 caracteres)
         key_preview = api_key[:4] + "..." if api_key else "None"
         print(f"Usando API key: {key_preview}")
+        print(f"Comprimento da API key: {len(api_key)} caracteres")
         
         # Configuração do cliente baseada na versão disponível
         if USING_NEW_CLIENT:
             # Inicializar o cliente com a API key (novo cliente)
-            client = OpenAI(api_key=api_key, timeout=60.0)
+            client = OpenAI(api_key=api_key.strip(), timeout=60.0)
             print(f"Cliente OpenAI moderno configurado com timeout de 60 segundos")
             
             # Criar uma solicitação para a API usando o novo cliente
