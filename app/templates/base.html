@@ -42,13 +42,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="/">
+                        <a class="nav-link {% if request.endpoint and request.endpoint == 'main.index' %}active{% endif %}" href="/">
                             <i class="fas fa-home"></i> Home
                         </a>
                     </li>
                     
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if request.endpoint == 'main.all_posts' %}active{% endif %}" href="#" id="postsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint and request.endpoint == 'main.all_posts' %}active{% endif %}" href="#" id="postsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-newspaper"></i> Posts
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="postsDropdown">
@@ -71,13 +71,13 @@
                     </li>
                     
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.teste_de_reconquista' %}active{% endif %}" href="/teste-de-reconquista">
+                        <a class="nav-link {% if request.endpoint and request.endpoint == 'main.teste_de_reconquista' %}active{% endif %}" href="/teste-de-reconquista">
                             <i class="fas fa-clipboard-check"></i> Teste de Reconquista
                         </a>
                     </li>
                     
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="/ai_chat/ia-relacionamento">
+                        <a class="nav-link {% if request.endpoint and request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="/ai_chat/ia-relacionamento">
                             <i class="fas fa-robot"></i> IA de Relacionamento
                         </a>
                     </li>
@@ -93,7 +93,7 @@
                     {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                         <li class="nav-item">
-                            <a class="nav-link {% if 'admin.' in request.endpoint %}active{% endif %}" href="/admin/dashboard">
+                            <a class="nav-link {% if request.endpoint and 'admin.' in request.endpoint %}active{% endif %}" href="/admin/dashboard">
                                 <i class="fas fa-tachometer-alt"></i> Admin
                             </a>
                         </li>
@@ -121,12 +121,12 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'auth.login' %}active{% endif %}" href="/auth/login">
+                            <a class="nav-link {% if request.endpoint and request.endpoint == 'auth.login' %}active{% endif %}" href="/auth/login">
                                 <i class="fas fa-sign-in-alt"></i> Login
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}" href="/auth/register">
+                            <a class="nav-link {% if request.endpoint and request.endpoint == 'auth.register' %}active{% endif %}" href="/auth/register">
                                 <i class="fas fa-user-plus"></i> Register
                             </a>
                         </li>
