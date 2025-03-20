@@ -50,10 +50,26 @@ class Config:
             
         # Adicionar SSL mode se necessário
         if '?' not in DATABASE_URL:
-            DATABASE_URL += '?sslmode=require'
+            DATABASE_URL += '?sslmode=prefer'
         elif 'sslmode=' not in DATABASE_URL:
-            DATABASE_URL += '&sslmode=require'
-            
+            DATABASE_URL += '&sslmode=prefer'
+        
+        # Garantir que os parâmetros de conexão estão completos
+        ssl_params = {
+            'sslmode': 'prefer',
+            'connect_timeout': '15',
+            'application_name': 'blog_app'
+        }
+        
+        # Adicionar os parâmetros que não existem na URL
+        for param, value in ssl_params.items():
+            param_str = f"{param}={value}"
+            if param not in DATABASE_URL:
+                if '?' in DATABASE_URL:
+                    DATABASE_URL += f"&{param_str}"
+                else:
+                    DATABASE_URL += f"?{param_str}"
+        
         # Usar a URL de conexão diretamente
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
         print(f"Usando string de conexão do DATABASE_URL: {DATABASE_URL.split('@')[0]}@****")
@@ -77,7 +93,7 @@ class Config:
         
         if POSTGRES_CONFIGURED:
             # Formar a URL de conexão com o PostgreSQL
-            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:{SUPABASE_DB_PORT}/{SUPABASE_DB_NAME}?sslmode=require'
+            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:{SUPABASE_DB_PORT}/{SUPABASE_DB_NAME}?sslmode=prefer&connect_timeout=15&application_name=blog_app'
             print(f"Usando conexão PostgreSQL via variáveis separadas: {SQLALCHEMY_DATABASE_URI.split('@')[0]}@****")
         else:
             # Fallback para SQLite
