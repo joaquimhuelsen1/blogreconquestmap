@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}IA de Relacionamento - Reconquest Blog{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ai-exclusive-alert {
+        background-color: #e7f5ff;
+        border-left: 5px solid #74c0fc;
+        padding: 15px 20px;
+        margin-bottom: 30px;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="chat-intro">
+                <h2>IA de Relacionamento</h2>
+                <p>Converse com nossa inteligência artificial especializada em relacionamentos. Tire dúvidas, peça conselhos ou compartilhe seus desafios amorosos.</p>
+                <p class="mb-0"><strong>Nota:</strong> Esta é uma ferramenta de auxílio e não substitui o aconselhamento profissional. Para casos específicos, considere consultar um profissional qualificado.</p>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div>
+                        <i class="fas fa-robot me-2"></i> Assistente Virtual de Relacionamento
+                        {% if current_user.is_authenticated %}
+                            {% if credits == -1 %}
+                            <span class="badge bg-success ms-2"><i class="fas fa-infinity"></i> Créditos ilimitados</span>
+                            {% else %}
+                            <span class="badge bg-info ms-2">Créditos: {{ credits }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <button id="clearChat" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-trash-alt me-1"></i> Limpar
+                    </button>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    {% if not messages %}
+                        <div class="assistant-message message">
+                            <p>Olá! Sou a IA de Relacionamento do Reconquest Blog. Como posso ajudar você hoje?</p>
+                            <div class="message-time">Agora</div>
+                        </div>
+                    {% else %}
+                        {% for message in messages %}
+                            <div class="user-message message">
+                                <p>{{ message.user }}</p>
+                                <div class="message-time">Você</div>
+                            </div>
+                            <div class="assistant-message message">
+                                <p>{{ message.assistant }}</p>
+                                <div class="message-time">Assistente</div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <!-- Typing indicator -->
+                <div id="typing-indicator" class="typing-indicator" style="display: none;">
+                    <div class="assistant-message message">
+                        <div class="typing-content">
+                            <div class="typing-dots">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                            <div class="message-time">Assistente</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-form">
+                    <form method="POST" id="messageForm">
+                        {{ form.hidden_tag() }}
+                        <div class="row g-0 align-items-center">
+                            <div class="col">
+                                {{ form.message(class="form-control", placeholder="Digite sua mensagem aqui...", rows=2, id="messageInput") }}
+                            </div>
+                            <div class="col-auto ms-2">
+                                <button type="submit" class="btn btn-send">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-center">
+                <a href="{{ url_for('main.premium_subscription') }}" class="btn btn-premium">
+                    <i class="fas fa-crown me-2"></i> Acesse a versão premium para conversas ilimitadas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Debug Info -->
+<div class="d-none">
+    <div id="debug-info">
+        <p>Thread ID: {{ session.get('openai_thread_id', 'None') }}</p>
+        <p>Messages Count: {{ messages|length }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %} 
