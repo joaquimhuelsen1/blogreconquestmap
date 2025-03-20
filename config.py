@@ -45,32 +45,14 @@ class Config:
                     user = pooler_user
                 
                 # Reconstruir a URL com o host correto do pooler e usuário modificado
-                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}{params}"
+                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}"
                 print("URL do Supabase corrigida para usar o host correto do pooler")
             
-        # Adicionar SSL mode se necessário
-        if '?' not in DATABASE_URL:
-            DATABASE_URL += '?sslmode=require'
-        elif 'sslmode=' not in DATABASE_URL:
-            DATABASE_URL += '&sslmode=require'
-        
-        # Garantir que os parâmetros de conexão estão completos
-        ssl_params = {
-            'sslmode': 'require',
-            'connect_timeout': '15',
-            'application_name': 'blog_app',
-            'client_encoding': 'UTF8',
-            'options': '-c timezone=UTC'
-        }
-        
-        # Adicionar os parâmetros que não existem na URL
-        for param, value in ssl_params.items():
-            param_str = f"{param}={value}"
-            if param not in DATABASE_URL:
-                if '?' in DATABASE_URL:
-                    DATABASE_URL += f"&{param_str}"
-                else:
-                    DATABASE_URL += f"?{param_str}"
+        # Adicionar parâmetros mínimos necessários
+        if '?' in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.split('?')[0]
+            
+        DATABASE_URL += "?sslmode=require"
         
         # Usar a URL de conexão diretamente
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
@@ -94,8 +76,8 @@ class Config:
         ])
         
         if POSTGRES_CONFIGURED:
-            # Formar a URL de conexão com o PostgreSQL
-            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=require&connect_timeout=15&application_name=blog_app&client_encoding=UTF8&options=-c%20timezone%3DUTC'
+            # Formar a URL de conexão com o PostgreSQL com parâmetros mínimos
+            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=require'
             print(f"Usando conexão PostgreSQL via variáveis separadas: {SQLALCHEMY_DATABASE_URI.split('@')[0]}@****")
         else:
             # Fallback para SQLite

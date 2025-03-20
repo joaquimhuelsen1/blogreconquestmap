@@ -162,33 +162,10 @@ def create_app():
                     user = pooler_user
                 
                 # Reconstruir a URL com o host correto do pooler
-                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}{params}"
+                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}?sslmode=require"
                 logger.info("URL do Supabase corrigida em app/__init__.py para usar o host correto do pooler")
-            
-            # Garantir que SSL está habilitado com modo "require"
-            if '?' not in app.config['SQLALCHEMY_DATABASE_URI']:
-                app.config['SQLALCHEMY_DATABASE_URI'] += '?sslmode=require'
-            elif 'sslmode=' not in app.config['SQLALCHEMY_DATABASE_URI']:
-                app.config['SQLALCHEMY_DATABASE_URI'] += '&sslmode=require'
-            
-            # Adicionar outros parâmetros de conexão
-            ssl_params = {
-                'sslmode': 'require',
-                'connect_timeout': '15',
-                'application_name': 'blog_app',
-                'client_encoding': 'UTF8',
-                'options': '-c timezone=UTC'
-            }
-            
-            # Adicionar parâmetros que não existem na URL
-            for param, value in ssl_params.items():
-                param_str = f"{param}={value}"
-                if param not in app.config['SQLALCHEMY_DATABASE_URI']:
-                    if '?' in app.config['SQLALCHEMY_DATABASE_URI']:
-                        app.config['SQLALCHEMY_DATABASE_URI'] += f"&{param_str}"
-                    else:
-                        app.config['SQLALCHEMY_DATABASE_URI'] += f"?{param_str}"
                 
+            # Log da URL final
             logger.info(f"URL final do banco de dados: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[0]}@****")
             
             # Diagnosticar conectividade com o host correto
