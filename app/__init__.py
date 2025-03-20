@@ -176,7 +176,8 @@ def create_app():
                 'sslmode': 'require',
                 'connect_timeout': '15',
                 'application_name': 'blog_app',
-                'sslrootcert': 'None'
+                'client_encoding': 'UTF8',
+                'options': '-c timezone=UTC'
             }
             
             # Adicionar parâmetros que não existem na URL

@@ -59,7 +59,8 @@ class Config:
             'sslmode': 'require',
             'connect_timeout': '15',
             'application_name': 'blog_app',
-            'sslrootcert': 'None'  # Desabilitar verificação de certificado
+            'client_encoding': 'UTF8',
+            'options': '-c timezone=UTC'
         }
         
         # Adicionar os parâmetros que não existem na URL
@@ -94,7 +95,7 @@ class Config:
         
         if POSTGRES_CONFIGURED:
             # Formar a URL de conexão com o PostgreSQL
-            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=require&connect_timeout=15&application_name=blog_app&sslrootcert=None'
+            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=require&connect_timeout=15&application_name=blog_app&client_encoding=UTF8&options=-c%20timezone%3DUTC'
             print(f"Usando conexão PostgreSQL via variáveis separadas: {SQLALCHEMY_DATABASE_URI.split('@')[0]}@****")
         else:
             # Fallback para SQLite
