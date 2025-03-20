@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 # Importar Flask-Migrate condicionalmente
 import importlib.util
-from flask_session import Session
+# from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 from datetime import datetime, timedelta
@@ -19,8 +19,15 @@ if flask_migrate_available:
 else:
     migrate = None
 
+# Verificar se Flask-Session está disponível
+flask_session_available = importlib.util.find_spec('flask_session') is not None
+if flask_session_available:
+    from flask_session import Session
+    sess = Session()
+else:
+    sess = None
+
 login_manager = LoginManager()
-sess = Session()
 csrf = CSRFProtect()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Please log in to access this page.'
@@ -40,13 +47,14 @@ def create_app():
     print(f"SECRET_KEY: {app.config.get('SECRET_KEY')[:8]}...")
     
     # Configurações da sessão
-    app.config['SESSION_TYPE'] = 'filesystem'
-    app.config['SESSION_PERMANENT'] = True
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
-    app.config['SESSION_FILE_DIR'] = os.path.join(app.instance_path, 'flask_session')
-    app.config['SESSION_USE_SIGNER'] = True
-    app.config['SESSION_KEY_PREFIX'] = 'reconquest_'
-    os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+    if flask_session_available:
+        app.config['SESSION_TYPE'] = 'filesystem'
+        app.config['SESSION_PERMANENT'] = True
+        app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
+        app.config['SESSION_FILE_DIR'] = os.path.join(app.instance_path, 'flask_session')
+        app.config['SESSION_USE_SIGNER'] = True
+        app.config['SESSION_KEY_PREFIX'] = 'reconquest_'
+        os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
     
     # Configuração CSRF
     app.config['WTF_CSRF_ENABLED'] = True
@@ -57,7 +65,8 @@ def create_app():
     if migrate is not None:
         migrate.init_app(app, db)
     login_manager.init_app(app)
-    sess.init_app(app)
+    if sess is not None:
+        sess.init_app(app)
     csrf.init_app(app)  # Inicializa proteção CSRF
     
     # Configurar login manager
