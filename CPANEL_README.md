@@ -56,7 +56,10 @@ Siga os passos abaixo cuidadosamente para configurar o aplicativo:
      cd ~/blog
      python init_production_db.py
      ```
-   - **Via Python Runner**: Se não tiver acesso SSH, use o "Python Runner" no cPanel para executar o script `init_production_db.py`
+   - **Via Python Runner**: Se não tiver acesso SSH, use o "Python Runner" no cPanel:
+     - Selecione o script `init_db_runner.py` (e não o init_production_db.py)
+     - Este script foi especialmente criado para Python Runners e irá instalar as dependências necessárias antes de inicializar o banco de dados
+     - Você verá a saída na tela mostrando o progresso da instalação e inicialização
 
 ### 5. Configuração de Variáveis de Ambiente
 
