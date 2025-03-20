@@ -6,7 +6,7 @@ from app.models import User
 import random
 import time
 import json
-from openai import OpenAI
+import openai  # Importar o módulo inteiro em vez da classe
 import os
 
 # Configuração: desativar modo de simulação (usar API OpenAI)
@@ -101,9 +101,15 @@ def ia_relacionamento():
                     print("Usando modo de simulação - resposta fixa gerada")
                 else:
                     # Usar OpenAI API para obter resposta, enviando APENAS a mensagem atual
-                    assistant_response = get_openai_response(user_message)
+                    api_response = get_openai_response(user_message)
                     
-                    # Não precisamos mais consumir créditos para usuários premium
+                    # Verificar se a resposta foi bem-sucedida
+                    if api_response["success"]:
+                        assistant_response = api_response["message"]
+                    else:
+                        success = False
+                        assistant_response = api_response["message"]
+                        print(f"Erro na API: {api_response['debug_info']}")
                     
             except Exception as api_error:
                 # Capturar erros específicos da API e usar resposta de fallback
@@ -163,86 +169,46 @@ def get_openai_response(user_message):
     try:
         # Obter chaves da configuração da aplicação
         api_key = current_app.config['OPENAI_API_KEY']
-        assistant_id = current_app.config['OPENAI_ASSISTANT_ID']
         
-        if not api_key or not assistant_id:
-            raise ValueError("Chaves da API OpenAI não configuradas. Verifique as variáveis de ambiente.")
+        if not api_key:
+            raise ValueError("Chave da API OpenAI não configurada. Verifique as variáveis de ambiente.")
         
-        client = OpenAI(api_key=api_key)
-        print(f"Cliente OpenAI inicializado")
+        # Configurar a API key
+        openai.api_key = api_key
+        print(f"API OpenAI configurada")
         
-        # Criar uma nova thread para cada conversa (não mantém contexto entre mensagens)
-        thread = client.beta.threads.create()
-        thread_id = thread.id
-        print(f"Nova thread criada: {thread_id[:8]}...")
-        
-        # Adicionar apenas a mensagem atual do usuário à thread
-        print(f"Adicionando mensagem à thread")
-        message = client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=user_message
+        # Criar uma solicitação para a API
+        print(f"Enviando solicitação ao modelo gpt-3.5-turbo")
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "Você é um especialista em relacionamentos e reconquista. Seu objetivo é ajudar pessoas a melhorarem seus relacionamentos amorosos e a reconquistar ex-parceiros de maneira saudável. Forneça conselhos práticos, diretos e personalizados para as situações descritas pelo usuário."
+                },
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=500,
+            temperature=0.7
         )
-        print(f"Mensagem adicionada: {message.id[:8]}...")
+        print(f"Resposta recebida da API")
         
-        # Executar o assistente na nova thread
-        print(f"Executando assistente na thread...")
-        run = client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=assistant_id
-        )
-        print(f"Execução iniciada: {run.id[:8]}...")
+        # Extrair o texto da resposta
+        assistant_response = response.choices[0].message.content
         
-        # Aguardar a conclusão
-        timeout = 60  # segundos
-        start_time = time.time()
-        
-        while time.time() - start_time < timeout:
-            run_status = client.beta.threads.runs.retrieve(
-                thread_id=thread_id,
-                run_id=run.id
-            )
-            
-            print(f"Status: {run_status.status}")
-            
-            if run_status.status == 'completed':
-                print("✓ Execução concluída com sucesso!")
-                # Obter a resposta
-                messages = client.beta.threads.messages.list(
-                    thread_id=thread_id
-                )
-                
-                print(f"Número de mensagens: {len(messages.data)}")
-                
-                # A primeira mensagem (mais recente) deve ser a resposta
-                if messages.data and len(messages.data) > 0:
-                    assistant_message = messages.data[0]
-                    if assistant_message.role == "assistant" and assistant_message.content:
-                        response = assistant_message.content[0].text.value
-                        print(f"Resposta do assistente: {response[:50]}...")
-                        return response
-                
-                return "Não foi possível obter uma resposta clara do assistente."
-            
-            elif run_status.status in ['failed', 'cancelled', 'expired']:
-                error_msg = f"OpenAI falhou: {run_status.status}"
-                if hasattr(run_status, 'last_error'):
-                    error_msg += f" - {run_status.last_error}"
-                print(f"Erro na execução: {error_msg}")
-                raise Exception(error_msg)
-            
-            # Aguardar antes de verificar novamente
-            time.sleep(1)
-        
-        # Se chegou aqui, é timeout
-        print("Tempo limite excedido!")
-        raise Exception("Tempo limite excedido para obter resposta do OpenAI")
-        
+        return {
+            "success": True,
+            "message": assistant_response,
+            "debug_info": "Resposta gerada com sucesso pela API OpenAI"
+        }
+    
     except Exception as e:
-        print(f"Erro em get_openai_response: {str(e)}")
-        import traceback
-        print(f"Traceback: {traceback.format_exc()}")
-        raise
+        print(f"ERRO NA API OPENAI: {str(e)}")
+        return {
+            "success": False,
+            "message": get_fallback_response(str(e)),
+            "debug_info": f"Erro na API: {str(e)}"
+        }
 
 @ai_chat_bp.route('/limpar-chat', methods=['POST'])
 def limpar_chat():
