@@ -5,7 +5,9 @@ from flask_login import LoginManager
 import importlib.util
 # from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
-from config import Config, SUPABASE_DIRECT_URL
+from config import Config
+# Definir a variável SUPABASE_DIRECT_URL como global no módulo
+SUPABASE_DIRECT_URL = None
 from datetime import datetime, timedelta
 import os
 import traceback
