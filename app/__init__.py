@@ -76,6 +76,16 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
+    # Verificar e corrigir URL para conectividade IPv4 do Supabase
+    if 'SQLALCHEMY_DATABASE_URI' in app.config and app.config['SQLALCHEMY_DATABASE_URI']:
+        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+        if 'db.mqyasfpbtcdrxccuhchv.supabase.co' in db_uri:
+            app.config['SQLALCHEMY_DATABASE_URI'] = db_uri.replace(
+                'db.mqyasfpbtcdrxccuhchv.supabase.co', 
+                'postgres.mqyasfpbtcdrxccuhchv.supabase.co'
+            )
+            logger.info("URL do Supabase corrigida em app/__init__.py: db.* -> postgres.* (compatibilidade IPv4)")
+    
     # Log das configurações importantes (sem revelar senhas)
     safe_config = {k: v for k, v in app.config.items() 
                   if not any(secret in k.lower() for secret in ['key', 'password', 'token', 'secret'])}
