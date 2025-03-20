@@ -27,9 +27,9 @@
         }
     </style>
     <!-- Custom style -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/style.css">
     <!-- The Reconquest Map CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <link rel="stylesheet" href="/static/css/custom.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -53,17 +53,17 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="postsDropdown">
                             <li>
-                                <a class="dropdown-item" href="{{ url_for('main.all_posts', type='all') }}">
+                                <a class="dropdown-item" href="/posts?type=all">
                                     <i class="fas fa-list"></i> All Posts
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{{ url_for('main.all_posts', type='free') }}">
+                                <a class="dropdown-item" href="/posts?type=free">
                                     <i class="fas fa-unlock"></i> Free Posts
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{{ url_for('main.all_posts', type='premium') }}">
+                                <a class="dropdown-item" href="/posts?type=premium">
                                     <i class="fas fa-crown"></i> Premium Posts
                                 </a>
                             </li>
@@ -71,20 +71,20 @@
                     </li>
                     
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.teste_de_reconquista' %}active{% endif %}" href="{{ url_for('main.teste_de_reconquista') }}">
+                        <a class="nav-link {% if request.endpoint == 'main.teste_de_reconquista' %}active{% endif %}" href="/teste-de-reconquista">
                             <i class="fas fa-clipboard-check"></i> Teste de Reconquista
                         </a>
                     </li>
                     
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="{{ url_for('ai_chat.ia_relacionamento') }}">
+                        <a class="nav-link {% if request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="/ia-relacionamento">
                             <i class="fas fa-robot"></i> IA de Relacionamento
                         </a>
                     </li>
                     
                     {% if not current_user.is_authenticated or not current_user.is_premium %}
                     <li class="nav-item">
-                        <a class="btn btn-premium px-3 mx-2" href="{{ url_for('main.premium_subscription') }}">
+                        <a class="btn btn-premium px-3 mx-2" href="/premium">
                             <i class="fas fa-crown"></i> Premium
                         </a>
                     </li>
@@ -93,7 +93,7 @@
                     {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                         <li class="nav-item">
-                            <a class="nav-link {% if 'admin.' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                            <a class="nav-link {% if 'admin.' in request.endpoint %}active{% endif %}" href="/admin/dashboard">
                                 <i class="fas fa-tachometer-alt"></i> Admin
                             </a>
                         </li>
@@ -108,12 +108,12 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+                                    <a class="dropdown-item" href="/auth/profile">
                                         <i class="fas fa-user-edit"></i> Edit Profile
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                    <a class="dropdown-item" href="/auth/logout">
                                         <i class="fas fa-sign-out-alt"></i> Logout
                                     </a>
                                 </li>
@@ -121,12 +121,12 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'auth.login' %}active{% endif %}" href="{{ url_for('auth.login') }}">
+                            <a class="nav-link {% if request.endpoint == 'auth.login' %}active{% endif %}" href="/auth/login">
                                 <i class="fas fa-sign-in-alt"></i> Login
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}" href="{{ url_for('auth.register') }}">
+                            <a class="nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}" href="/auth/register">
                                 <i class="fas fa-user-plus"></i> Register
                             </a>
                         </li>
@@ -173,7 +173,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="/static/js/main.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html> 
