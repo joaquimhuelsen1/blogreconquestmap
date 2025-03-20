@@ -80,4 +80,11 @@ class PasswordChangeForm(FlaskForm):
     current_password = PasswordField('Current Password', validators=[DataRequired()])
     new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password', message='Passwords must match.')])
-    submit = SubmitField('Change Password') 
+    submit = SubmitField('Change Password')
+
+class UserProfileForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Nova senha', validators=[Optional(), Length(min=6)])
+    confirm_password = PasswordField('Confirmar nova senha', validators=[Optional(), EqualTo('password', message='As senhas devem ser iguais')])
+    age = IntegerField('Idade', validators=[Optional(), NumberRange(min=18, max=120)], description="Opcional. Você pode deixar este campo em branco.")
+    submit = SubmitField('Atualizar perfil') 
