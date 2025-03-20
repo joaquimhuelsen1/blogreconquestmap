@@ -82,9 +82,16 @@ def create_app():
         if 'db.mqyasfpbtcdrxccuhchv.supabase.co' in db_uri:
             app.config['SQLALCHEMY_DATABASE_URI'] = db_uri.replace(
                 'db.mqyasfpbtcdrxccuhchv.supabase.co', 
-                'postgres.mqyasfpbtcdrxccuhchv.supabase.co'
+                'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co'
             )
-            logger.info("URL do Supabase corrigida em app/__init__.py: db.* -> postgres.* (compatibilidade IPv4)")
+            logger.info("URL do Supabase corrigida em app/__init__.py: db.* -> db-pooler.* (compatibilidade IPv4)")
+        # Se encontrar postgres.*, também corrigir para db-pooler.*
+        elif 'postgres.mqyasfpbtcdrxccuhchv.supabase.co' in db_uri:
+            app.config['SQLALCHEMY_DATABASE_URI'] = db_uri.replace(
+                'postgres.mqyasfpbtcdrxccuhchv.supabase.co', 
+                'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co'
+            )
+            logger.info("URL do Supabase corrigida em app/__init__.py: postgres.* -> db-pooler.* (compatibilidade IPv4)")
     
     # Log das configurações importantes (sem revelar senhas)
     safe_config = {k: v for k, v in app.config.items() 

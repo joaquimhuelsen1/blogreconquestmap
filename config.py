@@ -26,11 +26,12 @@ class Config:
             DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
             print("URL de banco de dados corrigida: postgres:// -> postgresql://")
         
-        # Corrigir URL do Supabase para usar postgres.* em vez de db.* (IPv4 compatibility)
+        # Corrigir URL do Supabase para usar connection pooler (IPv4 compatibility)
         if 'db.mqyasfpbtcdrxccuhchv.supabase.co' in DATABASE_URL:
+            # Tentar com o prefixo db-pooler em vez de postgres
             DATABASE_URL = DATABASE_URL.replace('db.mqyasfpbtcdrxccuhchv.supabase.co', 
-                                              'postgres.mqyasfpbtcdrxccuhchv.supabase.co')
-            print("URL do Supabase corrigida: db.* -> postgres.* (compatibilidade IPv4)")
+                                              'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co')
+            print("URL do Supabase corrigida: db.* -> db-pooler.* (compatibilidade IPv4)")
             
         # Usar a URL de conexão diretamente
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
@@ -43,11 +44,11 @@ class Config:
         SUPABASE_DB_PORT = os.environ.get('SUPABASE_DB_PORT', '5432')
         SUPABASE_DB_NAME = os.environ.get('SUPABASE_DB_NAME')
         
-        # Corrigir host do Supabase para usar postgres.* em vez de db.* (IPv4 compatibility)
+        # Corrigir host do Supabase para usar connection pooler (IPv4 compatibility)
         if SUPABASE_DB_HOST and 'db.mqyasfpbtcdrxccuhchv.supabase.co' in SUPABASE_DB_HOST:
             SUPABASE_DB_HOST = SUPABASE_DB_HOST.replace('db.mqyasfpbtcdrxccuhchv.supabase.co', 
-                                                      'postgres.mqyasfpbtcdrxccuhchv.supabase.co')
-            print("Host do Supabase corrigido: db.* -> postgres.* (compatibilidade IPv4)")
+                                                      'db-pooler.mqyasfpbtcdrxccuhchv.supabase.co')
+            print("Host do Supabase corrigido: db.* -> db-pooler.* (compatibilidade IPv4)")
         
         POSTGRES_CONFIGURED = all([
             SUPABASE_DB_USER, 
