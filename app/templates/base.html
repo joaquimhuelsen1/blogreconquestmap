@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ g.locale }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,6 +27,35 @@
             opacity: 1 !important;
             display: block !important;
         }
+        
+        /* Language selector styles */
+        .lang-selector {
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .lang-selector a {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 5px;
+            padding: 2px 5px;
+            text-decoration: none;
+            color: #212529;
+            border-radius: 3px;
+        }
+        
+        .lang-selector a.active {
+            font-weight: bold;
+            background-color: rgba(0,0,0,0.1);
+        }
+        
+        .lang-selector .divider {
+            height: 15px;
+            width: 1px;
+            background-color: #ddd;
+            margin: 0 5px;
+        }
     </style>
     <!-- Custom style -->
     <link rel="stylesheet" href="/static/css/style.css">
@@ -45,28 +74,28 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint and request.endpoint == 'main.index' %}active{% endif %}" href="/">
-                            <i class="fas fa-home"></i> Home
+                            <i class="fas fa-home"></i> {{ translate('home') }}
                         </a>
                     </li>
                     
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {% if request.endpoint and request.endpoint == 'main.all_posts' %}active{% endif %}" href="#" id="postsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-newspaper"></i> Posts
+                            <i class="fas fa-newspaper"></i> {{ translate('posts') }}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="postsDropdown">
                             <li>
                                 <a class="dropdown-item" href="/posts?type=all">
-                                    <i class="fas fa-list"></i> All Posts
+                                    <i class="fas fa-list"></i> {{ translate('all_posts') }}
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-item" href="/posts?type=free">
-                                    <i class="fas fa-unlock"></i> Free Posts
+                                    <i class="fas fa-unlock"></i> {{ translate('free_posts') }}
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-item" href="/posts?type=premium">
-                                    <i class="fas fa-crown"></i> Premium Posts
+                                    <i class="fas fa-crown"></i> {{ translate('premium_posts') }}
                                 </a>
                             </li>
                         </ul>
@@ -74,20 +103,20 @@
                     
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint and request.endpoint == 'main.teste_de_reconquista' %}active{% endif %}" href="/teste-de-reconquista">
-                            <i class="fas fa-clipboard-check"></i> Teste de Reconquista
+                            <i class="fas fa-clipboard-check"></i> {{ translate('test') }}
                         </a>
                     </li>
                     
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint and request.endpoint == 'ai_chat.ia_relacionamento' %}active{% endif %}" href="{{ url_for('ai_chat.ia_relacionamento') }}">
-                            <i class="fas fa-robot"></i> IA de Relacionamento
+                            <i class="fas fa-robot"></i> {{ translate('ai_chat') }}
                         </a>
                     </li>
                     
                     {% if not current_user.is_authenticated or not current_user.is_premium %}
                     <li class="nav-item">
                         <a class="btn btn-premium px-3 mx-2" href="/premium">
-                            <i class="fas fa-crown"></i> Premium
+                            <i class="fas fa-crown"></i> {{ translate('premium') }}
                         </a>
                     </li>
                     {% endif %}
@@ -96,7 +125,7 @@
                         {% if current_user.is_admin %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint and 'admin.' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
-                                <i class="fas fa-tachometer-alt"></i> Admin
+                                <i class="fas fa-tachometer-alt"></i> {{ translate('admin') }}
                             </a>
                         </li>
                         {% endif %}
@@ -111,12 +140,12 @@
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
                                     <a class="dropdown-item" href="/auth/profile">
-                                        <i class="fas fa-user-edit"></i> Edit Profile
+                                        <i class="fas fa-user-edit"></i> {{ translate('edit_profile') }}
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="/auth/logout">
-                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                        <i class="fas fa-sign-out-alt"></i> {{ translate('logout') }}
                                     </a>
                                 </li>
                             </ul>
@@ -124,15 +153,26 @@
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint and request.endpoint == 'auth.login' %}active{% endif %}" href="/auth/login">
-                                <i class="fas fa-sign-in-alt"></i> Login
+                                <i class="fas fa-sign-in-alt"></i> {{ translate('login') }}
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint and request.endpoint == 'auth.register' %}active{% endif %}" href="/auth/register">
-                                <i class="fas fa-user-plus"></i> Register
+                                <i class="fas fa-user-plus"></i> {{ translate('register') }}
                             </a>
                         </li>
                     {% endif %}
+                    
+                    <!-- Language Selector -->
+                    <li class="nav-item lang-selector">
+                        <a href="{{ url_for('set_language', lang='pt') }}" class="{% if g.locale == 'pt' %}active{% endif %}">
+                            PT
+                        </a>
+                        <div class="divider"></div>
+                        <a href="{{ url_for('set_language', lang='en') }}" class="{% if g.locale == 'en' %}active{% endif %}">
+                            EN
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -155,11 +195,11 @@
             <div class="row">
                 <div class="col-md-6 text-center text-md-start">
                     <h5>Reconquest Blog</h5>
-                    <p>The best content on male reconquest and relationships.</p>
+                    <p>{{ translate('best_content') }}</p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
                     <h5>Conteúdo de Qualidade</h5>
-                    <p>Artigos exclusivos sobre relacionamentos e desenvolvimento pessoal.</p>
+                    <p>{{ translate('quality_content') }}</p>
                 </div>
             </div>
         </div>
@@ -167,7 +207,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-12 text-center">
-                        <p class="mb-0">&copy; {{ now.year }} Reconquest Blog. All rights reserved.</p>
+                        <p class="mb-0">&copy; {{ now.year }} Reconquest Blog. {{ translate('all_rights_reserved') }}</p>
                     </div>
                 </div>
             </div>
