@@ -21,9 +21,14 @@ class Config:
     DATABASE_URL = os.environ.get('DATABASE_URL')
     
     if DATABASE_URL:
+        # Correção para URLs do Railway: substituir postgres:// por postgresql://
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+            print("URL de banco de dados corrigida: postgres:// -> postgresql://")
+            
         # Usar a URL de conexão diretamente
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
-        print("Usando string de conexão do DATABASE_URL")
+        print(f"Usando string de conexão do DATABASE_URL: {DATABASE_URL[:20]}...")
     else:
         # Fallback para as variáveis separadas do Supabase
         SUPABASE_DB_USER = os.environ.get('SUPABASE_DB_USER')

@@ -62,6 +62,21 @@ def create_app():
     
     # Inicializar extensões
     db.init_app(app)
+    
+    # Tentar conectar ao banco de dados
+    try:
+        # Se estamos usando PostgreSQL, tentar conectar
+        if 'postgresql://' in app.config['SQLALCHEMY_DATABASE_URI']:
+            with app.app_context():
+                db.engine.connect()
+                print("Conexão com o banco de dados PostgreSQL estabelecida com sucesso!")
+    except Exception as e:
+        print(f"ERRO DE CONEXÃO COM BANCO DE DADOS: {str(e)}")
+        print("Alterando para SQLite como fallback devido a erro de conexão...")
+        # Alterar para SQLite como fallback
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'fallback.db')
+        db = SQLAlchemy(app)  # Reinicializar SQLAlchemy com nova configuração
+        
     if migrate is not None:
         migrate.init_app(app, db)
     login_manager.init_app(app)
