@@ -130,4 +130,29 @@ function setupFlashMessages() {
             }, 1000);
         }, 3000);
     });
-} 
+}
+
+// Configuração global para AJAX - adicionar token CSRF a todas as requisições
+$(document).ready(function() {
+    // Obter o token CSRF (pode ser definido em um meta tag ou via JavaScript)
+    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+    
+    // Configurar o jQuery para incluir o token CSRF em todas as requisições AJAX
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            // Apenas para requisições não GET
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            }
+        }
+    });
+    
+    console.log("CSRF token configurado para requisições AJAX");
+    
+    // Exemplo de debug
+    $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+        console.error("Erro na requisição AJAX:", thrownError);
+        console.error("Status:", jqxhr.status);
+        console.error("Resposta:", jqxhr.responseText);
+    });
+}); 
