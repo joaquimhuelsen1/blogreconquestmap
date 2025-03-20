@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (confirm('Tem certeza que deseja limpar todo o histórico da conversa?')) {
                 console.log("Limpando o histórico do chat...");
                 
-                fetch('/ai_chat/limpar-chat', {
+                fetch('/limpar-chat', {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log("Valor enviado no FormData:", formData.get('message'));
             
-            fetch('/ai_chat/ia-relacionamento', {
+            fetch('/ia-relacionamento', {
                 method: 'POST',
                 body: formData,
                 headers: {
