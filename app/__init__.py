@@ -200,7 +200,7 @@ def create_app():
     logger.info(f"SECRET_KEY configurada: {app.config.get('SECRET_KEY')[:5]}...")
     
     # Local dev settings
-    if config.ENV == 'development':
+    if app.config.get('ENV') == 'development':
         app.config['SERVER_NAME'] = None
         app.config['SESSION_COOKIE_SECURE'] = False
         app.config['REMEMBER_COOKIE_SECURE'] = False
