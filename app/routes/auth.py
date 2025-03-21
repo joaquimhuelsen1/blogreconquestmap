@@ -57,23 +57,87 @@ def login():
         if form.validate_on_submit():
             logger.info(f"Tentativa de login: {form.email.data}")
             
-            user = User.query.filter_by(email=form.email.data).first()
-            
-            if user and user.check_password(form.password.data):
-                login_user(user, remember=form.remember_me.data)
-                logger.info(f"Login bem-sucedido para: {user.email} (ID: {user.id})")
+            # Adicionar tratamento de erro SSL aqui
+            try:
+                user = User.query.filter_by(email=form.email.data).first()
                 
-                # Registrar a sessão para garantir que o token CSRF seja salvo
-                session.modified = True
-                session.permanent = True  # Tornar a sessão permanente
+                if user and user.check_password(form.password.data):
+                    login_user(user, remember=form.remember_me.data)
+                    logger.info(f"Login bem-sucedido para: {user.email} (ID: {user.id})")
+                    
+                    # Registrar a sessão para garantir que o token CSRF seja salvo
+                    session.modified = True
+                    session.permanent = True  # Tornar a sessão permanente
+                    
+                    next_page = request.args.get('next')
+                    if not next_page or urlparse(next_page).netloc != '':
+                        next_page = url_for('main.index')
+                    return redirect(next_page)
+                else:
+                    logger.warning(f"Falha de login para email: {form.email.data}")
+                    flash('Invalid email or password', 'danger')
+            except Exception as e:
+                # Registrar o erro
+                logger.error(f"Erro durante consulta de usuário: {str(e)}")
                 
-                next_page = request.args.get('next')
-                if not next_page or urlparse(next_page).netloc != '':
-                    next_page = url_for('main.index')
-                return redirect(next_page)
-            else:
-                logger.warning(f"Falha de login para email: {form.email.data}")
-                flash('Invalid email or password', 'danger')
+                # Verificar se é um erro SSL
+                is_ssl_error = False
+                if hasattr(e, 'orig') and isinstance(e.orig, Exception):
+                    orig_error = str(e.orig).lower()
+                    is_ssl_error = 'ssl error' in orig_error or 'decryption failed' in orig_error
+                
+                if is_ssl_error:
+                    logger.warning("Detectado erro SSL na consulta de usuário, tentando login alternativo")
+                    # Opção 1: Tentar encontrar o usuário por email usando SQL direto
+                    try:
+                        # Usar o mesmo SQL mostrado no erro, mas evitando ORM
+                        sql = """
+                        SELECT id, username, email, password_hash, is_admin, is_premium
+                        FROM "user" 
+                        WHERE email = %s 
+                        LIMIT 1
+                        """
+                        # Obter conexão direta
+                        connection = db.engine.raw_connection()
+                        cursor = connection.cursor()
+                        cursor.execute(sql, (form.email.data,))
+                        user_row = cursor.fetchone()
+                        cursor.close()
+                        connection.close()
+                        
+                        if user_row:
+                            # Criar objeto User manualmente
+                            from app.models import User
+                            manual_user = User(
+                                id=user_row[0],
+                                username=user_row[1],
+                                email=user_row[2],
+                                is_admin=user_row[4],
+                                is_premium=user_row[5]
+                            )
+                            manual_user.password_hash = user_row[3]
+                            
+                            # Verificar senha manualmente
+                            if manual_user.check_password(form.password.data):
+                                login_user(manual_user, remember=form.remember_me.data)
+                                logger.info(f"Login bem-sucedido via método alternativo para: {manual_user.email}")
+                                
+                                # Registrar a sessão
+                                session.modified = True
+                                session.permanent = True
+                                
+                                next_page = request.args.get('next')
+                                if not next_page or urlparse(next_page).netloc != '':
+                                    next_page = url_for('main.index')
+                                return redirect(next_page)
+                    except Exception as alt_error:
+                        logger.error(f"Falha no método alternativo de login: {str(alt_error)}")
+                    
+                    # Se chegou aqui, ambos os métodos falharam
+                    flash('Unable to connect to the database. Please try again later.', 'danger')
+                else:
+                    # Outros erros que não são de SSL
+                    flash('An error occurred during login. Please try again.', 'danger')
         
         # Sempre gerar um novo token CSRF para o template
         new_csrf_token = generate_csrf()
