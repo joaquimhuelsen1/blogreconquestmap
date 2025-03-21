@@ -166,7 +166,7 @@ def create_app():
                     user = pooler_user
                 
                 # Reconstruir a URL com o host correto do pooler
-                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}?sslmode=require"
+                app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}?sslmode=prefer"
                 logger.info("URL do Supabase corrigida em app/__init__.py para usar o host correto do pooler")
                 
             # Log da URL final
