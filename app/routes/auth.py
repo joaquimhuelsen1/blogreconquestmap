@@ -103,6 +103,20 @@ def register():
         logger.info("==== INICIANDO REGISTRO DE NOVO USUÁRIO ====")
         logger.info(f"Data/hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
+        # Inicializar a sessão se ela não existir
+        if not session:
+            logger.warning("Sessão não inicializada, criando nova")
+            session.clear()
+            session.permanent = True
+        
+        # Inicializar token CSRF na sessão
+        if 'csrf_token' not in session:
+            logger.warning("Token CSRF não encontrado na sessão, gerando novo token")
+            token = generate_csrf()
+            session['csrf_token'] = token
+            logger.info(f"Token CSRF criado e armazenado na sessão: {token[:8]}...")
+            session.modified = True
+
         if current_user.is_authenticated:
             logger.info("Usuário já autenticado, redirecionando para página inicial")
             return redirect(url_for('main.index'))
@@ -111,28 +125,24 @@ def register():
         
         # Para requisições POST, verificar se há problemas com CSRF
         if request.method == 'POST':
-            # Garantir que a sessão existe
-            if 'csrf_token' not in session:
-                logger.warning("Sessão sem token CSRF - inicializando nova sessão")
-                # Forçar uma regeneração do token na sessão
-                generate_csrf()
-                session.modified = True
-                session.permanent = True  # Tornar a sessão permanente
-                
-            # Verificar token CSRF explicitamente, mas ser mais tolerante
-            logger.info("Verificando token CSRF...")
+            # Verificar e reparar a sessão CSRF
             csrf_token = request.form.get('csrf_token')
+            logger.info(f"Token CSRF recebido: {csrf_token[:8] if csrf_token else 'Nenhum'}")
+            logger.info(f"Token CSRF na sessão: {session.get('csrf_token', 'Nenhum')[:8] if session.get('csrf_token') else 'Nenhum'}")
+            
+            # Se não há token no formulário, regerar
             if not csrf_token:
-                logger.warning("Token CSRF ausente no formulário - tentando continuar mesmo assim")
-                # Gerar um novo token e continuar
+                logger.warning("Token CSRF ausente no formulário")
                 new_token = generate_csrf()
+                session.modified = True
                 return render_template('auth/register.html', form=form, csrf_token=new_token)
             
-            # Se o formulário tem erro de validação e for por causa do CSRF
+            # Verificar erros CSRF no formulário
             if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
-                logger.warning(f"Erro de validação CSRF: {form.errors['csrf_token']} - tentando recuperar")
-                # Em vez de mostrar um erro, tentar com um novo token
+                logger.warning(f"Erro de validação CSRF: {form.errors['csrf_token']}")
+                # Regenerar token e continuar
                 new_token = generate_csrf()
+                session.modified = True
                 return render_template('auth/register.html', form=form, csrf_token=new_token)
         
         if form.validate_on_submit():
@@ -163,77 +173,40 @@ def register():
                 )
                 user.set_password(form.password.data)
                 
-                # Garantir que não há transação ativa
-                db.session.rollback()
-                logger.info("Sessão limpa de transações anteriores")
+                logger.info("Adicionando usuário à sessão")
+                db.session.add(user)
                 
-                # Adicionar usuário e commitar em uma operação simples
-                try:
-                    logger.info("Adicionando usuário à sessão")
-                    db.session.add(user)
-                    logger.info("Tentando commit direto")
-                    db.session.commit()
-                    logger.info("✅ Commit realizado com sucesso")
-                    
+                # Commit para o banco de dados com tratamento de erros mais robusto
+                attempt = 1
+                max_attempts = 3
+                success = False
+                while attempt <= max_attempts and not success:
+                    try:
+                        logger.info(f"Tentativa {attempt} de commit na sessão")
+                        db.session.commit()
+                        success = True
+                        logger.info("✅ Commit realizado com sucesso")
+                    except Exception as commit_error:
+                        db.session.rollback()
+                        logger.error(f"Erro no commit (tentativa {attempt}): {str(commit_error)}")
+                        attempt += 1
+                        if attempt <= max_attempts:
+                            logger.info(f"Tentando commit novamente...")
+                
+                if success:
                     # Garantir que o ID foi atribuído corretamente
+                    db.session.refresh(user)
                     logger.info(f"✅ Usuário criado com sucesso: ID={user.id}")
                     flash('Your account has been created! You can now log in.', 'success')
                     
-                    # Limpar e regenerar sessão para CSRF token fresco
-                    session.clear()
-                    generate_csrf() 
+                    # Garantir que a sessão é salva para manter o token CSRF
                     session.modified = True
-                    session.permanent = True
+                    session.permanent = True  # Tornar a sessão permanente
                     
                     return redirect(url_for('auth.login'))
-                    
-                except Exception as commit_error:
-                    db.session.rollback()
-                    logger.error(f"❌ Erro no commit: {str(commit_error)}")
-                    
-                    # Se for erro SSL, tentar método alternativo
-                    if 'SSL' in str(commit_error) or 'OperationalError' in str(commit_error):
-                        logger.warning("Tentando método alternativo para criar usuário...")
-                        
-                        # Tentar inserção direta via SQL
-                        try:
-                            from sqlalchemy import text
-                            with db.engine.connect() as conn:
-                                # Começar uma nova transação
-                                with conn.begin():
-                                    # SQL para inserir usuário diretamente
-                                    sql = text("""
-                                    INSERT INTO "user" (username, email, password_hash, is_admin, is_premium, created_at)
-                                    VALUES (:username, :email, :password_hash, :is_admin, :is_premium, :created_at)
-                                    """)
-                                    
-                                    conn.execute(
-                                        sql, 
-                                        {
-                                            'username': form.username.data,
-                                            'email': form.email.data,
-                                            'password_hash': user.password_hash,
-                                            'is_admin': False,
-                                            'is_premium': False,
-                                            'created_at': datetime.utcnow()
-                                        }
-                                    )
-                            
-                            logger.info("✅ Usuário criado com SQL direto com sucesso!")
-                            flash('Your account has been created! You can now log in.', 'success')
-                            
-                            # Limpar e regenerar sessão
-                            session.clear()
-                            generate_csrf()
-                            session.modified = True
-                            session.permanent = True
-                            
-                            return redirect(url_for('auth.login'))
-                        except Exception as sql_error:
-                            logger.error(f"❌ Erro no SQL direto: {str(sql_error)}")
-                            flash('An error occurred while creating your account. Please try again.', 'danger')
-                    else:
-                        flash('An error occurred while creating your account. Please try again.', 'danger')
+                else:
+                    logger.error("❌ Falha ao criar usuário após múltiplas tentativas")
+                    flash('An error occurred while creating your account. Please try again.', 'danger')
             except Exception as user_creation_error:
                 logger.error(f"❌ Erro na criação do usuário: {str(user_creation_error)}")
                 logger.exception("Detalhes completos do erro:")

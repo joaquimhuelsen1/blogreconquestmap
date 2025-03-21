@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, session, g, redirect, url_for, flash
+from flask import Flask, request, jsonify, render_template, session, g, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 # Importar Flask-Migrate condicionalmente
@@ -244,8 +244,11 @@ def create_app():
     app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken', 'X-CSRF-Token']
     app.config['WTF_CSRF_SECRET_KEY'] = app.config['SECRET_KEY']  # Usar a mesma chave secreta
     app.config['WTF_CSRF_CHECK_DEFAULT'] = True
-    app.config['WTF_CSRF_SSL_STRICT'] = False
+    app.config['WTF_CSRF_SSL_STRICT'] = False  # Desativar checagem SSL estrita para CSRF
     app.config['WTF_CSRF_TIME_LIMIT'] = 86400  # 24 horas
+    # Configuração para tolerância de CSRF
+    app.config['WTF_CSRF_ENABLED'] = True
+    app.config['WTF_I_KNOW_WHAT_IM_DOING'] = True  # Aviso: Use com cautela em produção
     logger.info(f"Proteção CSRF: ATIVADA, Tempo limite: {app.config['WTF_CSRF_TIME_LIMIT']}s")
     
     # Inicializar extensões
