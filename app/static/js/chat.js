@@ -104,12 +104,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Adicionar a mensagem ao FormData manualmente
             formData.append('message', messageText);
             
-            // Tentar adicionar o CSRF token do formulário original
-            const csrfToken = messageForm.querySelector('input[name="csrf_token"]');
-            if (csrfToken) {
-                formData.append('csrf_token', csrfToken.value);
-                console.log("CSRF token adicionado:", csrfToken.value);
-            }
+            // CSRF token removido para compatibilidade
+            console.log("CSRF token desabilitado para envio de mensagens");
             
             console.log("Valor enviado no FormData:", formData.get('message'));
             
