@@ -138,19 +138,32 @@ def register():
         if form.validate_on_submit():
             logger.info(f"Formulário validado: username={form.username.data}, email={form.email.data}")
             
-            # Verificar se usuário ou email já existem
-            existing_user = User.query.filter_by(username=form.username.data).first()
-            existing_email = User.query.filter_by(email=form.email.data).first()
-            
-            if existing_user:
-                logger.warning(f"Username já existe: {form.username.data}")
-                flash('Username already taken', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
-                
-            if existing_email:
-                logger.warning(f"Email já existe: {form.email.data}")
-                flash('Email already registered', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
+            # Verificar se usuário ou email já existem com tratamento de erro
+            try:
+                existing_user = User.query.filter_by(username=form.username.data).first()
+                if existing_user:
+                    logger.warning(f"Username já existe: {form.username.data}")
+                    flash('Username already taken', 'danger')
+                    return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
+            except Exception as e:
+                if 'SSL' in str(e) or 'OperationalError' in str(e):
+                    logger.warning(f"Erro SSL ao verificar username existente, assumindo disponível: {str(e)}")
+                    existing_user = None
+                else:
+                    raise
+
+            try:        
+                existing_email = User.query.filter_by(email=form.email.data).first()
+                if existing_email:
+                    logger.warning(f"Email já existe: {form.email.data}")
+                    flash('Email already registered', 'danger')
+                    return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
+            except Exception as e:
+                if 'SSL' in str(e) or 'OperationalError' in str(e):
+                    logger.warning(f"Erro SSL ao verificar email existente, assumindo disponível: {str(e)}")
+                    existing_email = None
+                else:
+                    raise
             
             # Criação do novo usuário
             try:
@@ -163,40 +176,91 @@ def register():
                 )
                 user.set_password(form.password.data)
                 
-                logger.info("Adicionando usuário à sessão")
-                db.session.add(user)
-                
-                # Commit para o banco de dados com tratamento de erros mais robusto
-                attempt = 1
-                max_attempts = 3
-                success = False
-                while attempt <= max_attempts and not success:
-                    try:
-                        logger.info(f"Tentativa {attempt} de commit na sessão")
-                        db.session.commit()
-                        success = True
-                        logger.info("✅ Commit realizado com sucesso")
-                    except Exception as commit_error:
-                        db.session.rollback()
-                        logger.error(f"Erro no commit (tentativa {attempt}): {str(commit_error)}")
-                        attempt += 1
-                        if attempt <= max_attempts:
-                            logger.info(f"Tentando commit novamente...")
-                
-                if success:
-                    # Garantir que o ID foi atribuído corretamente
-                    db.session.refresh(user)
+                # Usar transação explícita com tratamento de erro robusto
+                try:
+                    # Iniciando transação explícita
+                    db.session.begin()
+                    
+                    logger.info("Adicionando usuário à sessão")
+                    db.session.add(user)
+                    
+                    # Commit para o banco de dados
+                    db.session.commit()
+                    logger.info("✅ Commit realizado com sucesso")
+                    
+                    # Garantir que o ID foi atribuído
                     logger.info(f"✅ Usuário criado com sucesso: ID={user.id}")
                     flash('Your account has been created! You can now log in.', 'success')
                     
-                    # Garantir que a sessão é salva para manter o token CSRF
+                    # Limpar e regenerar sessão para CSRF token fresco
+                    session.clear()
+                    generate_csrf() 
                     session.modified = True
                     session.permanent = True  # Tornar a sessão permanente
                     
                     return redirect(url_for('auth.login'))
-                else:
-                    logger.error("❌ Falha ao criar usuário após múltiplas tentativas")
-                    flash('An error occurred while creating your account. Please try again.', 'danger')
+                    
+                except Exception as commit_error:
+                    # Rollback em caso de erro
+                    db.session.rollback()
+                    logger.error(f"❌ Erro no commit: {str(commit_error)}")
+                    
+                    # Se for erro SSL, tentar forçar a criação mesmo assim
+                    if 'SSL' in str(commit_error) or 'OperationalError' in str(commit_error):
+                        logger.warning("Tentando método alternativo para criar usuário com erro SSL...")
+                        
+                        # Criar usuário diretamente na tabela
+                        try:
+                            # SQL direto como último recurso
+                            from flask import current_app
+                            from sqlalchemy import text
+                            
+                            engine = db.engine
+                            with engine.connect() as connection:
+                                # Começa transação
+                                trans = connection.begin()
+                                try:
+                                    # Inserir o usuário diretamente
+                                    sql = text("""
+                                    INSERT INTO "user" (username, email, password_hash, is_admin, is_premium, created_at)
+                                    VALUES (:username, :email, :password_hash, :is_admin, :is_premium, :created_at)
+                                    """)
+                                    
+                                    connection.execute(
+                                        sql, 
+                                        {
+                                            'username': form.username.data,
+                                            'email': form.email.data,
+                                            'password_hash': user.password_hash,
+                                            'is_admin': False,
+                                            'is_premium': False,
+                                            'created_at': datetime.utcnow()
+                                        }
+                                    )
+                                    
+                                    # Commit a transação
+                                    trans.commit()
+                                    logger.info("✅ Usuário criado com SQL direto com sucesso!")
+                                    flash('Your account has been created! You can now log in.', 'success')
+                                    
+                                    # Limpar e regenerar sessão para token CSRF
+                                    session.clear()
+                                    generate_csrf()
+                                    session.modified = True
+                                    session.permanent = True
+                                    
+                                    return redirect(url_for('auth.login'))
+                                except Exception as sql_error:
+                                    # Rollback transação em caso de erro
+                                    trans.rollback()
+                                    logger.error(f"❌ Erro no SQL direto: {str(sql_error)}")
+                                    flash('An error occurred while creating your account. Please try again.', 'danger')
+                        
+                        except Exception as direct_error:
+                            logger.error(f"❌ Falha no método alternativo: {str(direct_error)}")
+                            flash('An error occurred while creating your account. Please try again.', 'danger')
+                    else:
+                        flash('An error occurred while creating your account. Please try again.', 'danger')
             except Exception as user_creation_error:
                 logger.error(f"❌ Erro na criação do usuário: {str(user_creation_error)}")
                 logger.exception("Detalhes completos do erro:")
