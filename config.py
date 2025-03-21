@@ -7,6 +7,9 @@ load_dotenv()
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+# Variável global para armazenar a URL direta de conexão
+SUPABASE_DIRECT_URL = None
+
 class Config:
     # Configurações básicas
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'uma-chave-secreta-dificil-de-adivinhar'
@@ -44,15 +47,19 @@ class Config:
                     print(f"Usuário modificado para formato pooler: {user} -> {pooler_user}")
                     user = pooler_user
                 
-                # Reconstruir a URL com o host correto do pooler e usuário modificado
-                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}"
-                print("URL do Supabase corrigida para usar o host correto do pooler")
+                # Tentar inicialmente com o pooler, mas se isso falhar,
+                # o app/__init__.py tentará com conexão direta
+                DATABASE_URL = f"postgresql://{user}:{password}@aws-0-us-west-1.pooler.supabase.com:6543/{dbname}?sslmode=prefer"
+                # Também armazenar uma URL alternativa para tentativa direta
+                global SUPABASE_DIRECT_URL
+                SUPABASE_DIRECT_URL = f"postgresql://postgres:{password}@db.{project_id}.supabase.co:5432/{dbname}?sslmode=prefer"
+                print("URLs de conexão direta e pooled preparadas para o Supabase")
             
         # Adicionar parâmetros mínimos necessários
         if '?' in DATABASE_URL:
             DATABASE_URL = DATABASE_URL.split('?')[0]
             
-        DATABASE_URL += "?sslmode=require"
+        DATABASE_URL += "?sslmode=prefer"
         
         # Usar a URL de conexão diretamente
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
@@ -77,7 +84,7 @@ class Config:
         
         if POSTGRES_CONFIGURED:
             # Formar a URL de conexão com o PostgreSQL com parâmetros mínimos
-            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=require'
+            SQLALCHEMY_DATABASE_URI = f'postgresql://{SUPABASE_DB_USER}:{SUPABASE_DB_PASSWORD}@{SUPABASE_DB_HOST}:6543/{SUPABASE_DB_NAME}?sslmode=prefer'
             print(f"Usando conexão PostgreSQL via variáveis separadas: {SQLALCHEMY_DATABASE_URI.split('@')[0]}@****")
         else:
             # Fallback para SQLite
