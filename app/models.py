@@ -106,4 +106,13 @@ class Comment(db.Model):
 
 @login_manager.user_loader
 def load_user(id):
-    return User.query.get(int(id)) 
+    try:
+        return User.query.get(int(id))
+    except Exception as e:
+        # Se ocorrer um erro, tente reverter a transação e tentar novamente
+        try:
+            db.session.rollback()
+            return User.query.get(int(id))
+        except:
+            # Se ainda falhar, retorne None para que o Flask-Login saiba que não há usuário
+            return None 

@@ -331,6 +331,15 @@ def create_app():
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
     
+    # Configurar manipulação de erro de transação pendente
+    @app.before_request
+    def check_for_pending_transactions():
+        """Verifica e reverte qualquer transação pendente antes da requisição."""
+        try:
+            db.session.rollback()
+        except:
+            pass  # Ignorar erros durante o rollback
+    
     # Handler para requisições AJAX retornarem JSON em caso de erro
     @app.errorhandler(Exception)
     def handle_exception(e):
