@@ -12,8 +12,8 @@ from datetime import datetime
 
 # Configurar logs
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
     handlers=[
         logging.FileHandler("app_debug.log"),
         logging.StreamHandler()
