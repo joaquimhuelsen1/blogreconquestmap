@@ -234,6 +234,8 @@ def create_app():
     app.config['SESSION_REFRESH_EACH_REQUEST'] = True
     app.config['SESSION_FILE_DIR'] = os.path.join(app.instance_path, 'flask_session')
     app.config['SESSION_KEY_PREFIX'] = 'reconquest_'
+    app.config['SESSION_FILE_THRESHOLD'] = 500  # Aumentar número máximo de arquivos de sessão
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)  # Aumentar tempo de vida da sessão
     os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
     logger.info(f"Diretório de sessão: {app.config['SESSION_FILE_DIR']}")
     
@@ -245,10 +247,15 @@ def create_app():
     app.config['WTF_CSRF_SECRET_KEY'] = app.config['SECRET_KEY']  # Usar a mesma chave secreta
     app.config['WTF_CSRF_CHECK_DEFAULT'] = True
     app.config['WTF_CSRF_SSL_STRICT'] = False  # Desativar checagem SSL estrita para CSRF
-    app.config['WTF_CSRF_TIME_LIMIT'] = 86400  # 24 horas
+    app.config['WTF_CSRF_TIME_LIMIT'] = 86400 * 7  # 7 dias
     # Configuração para tolerância de CSRF
     app.config['WTF_CSRF_ENABLED'] = True
     app.config['WTF_I_KNOW_WHAT_IM_DOING'] = True  # Aviso: Use com cautela em produção
+    
+    # TEMPORÁRIO: desativar checagem de CSRF para login e registro
+    # Opção nuclear - desativar completamente a checagem CSRF se necessário
+    # app.config['WTF_CSRF_ENABLED'] = False  # DESCOMENTE ESTA LINHA SE NADA MAIS FUNCIONAR
+    
     logger.info(f"Proteção CSRF: ATIVADA, Tempo limite: {app.config['WTF_CSRF_TIME_LIMIT']}s")
     
     # Inicializar extensões

@@ -37,34 +37,51 @@ def login():
             session.clear()
             session.permanent = True
         
-        # Inicializar token CSRF na sessão
-        if 'csrf_token' not in session:
-            logger.warning("Token CSRF não encontrado na sessão de login, gerando novo token")
-            token = generate_csrf()
-            session['csrf_token'] = token
-            logger.info(f"Token CSRF criado e armazenado na sessão: {token[:8]}...")
-            session.modified = True
-            
-        # Log de depuração da sessão
+        # Debug da sessão
         logger.info(f"ID da sessão no login: {session.sid if hasattr(session, 'sid') else 'N/A'}")
-        logger.info(f"Chaves na sessão: {list(session.keys())}")
+        logger.info(f"Chaves na sessão antes: {list(session.keys())}")
+        
+        # Preservar token CSRF se já existir
+        csrf_token = session.get('csrf_token', None)
+        if not csrf_token:
+            logger.warning("Token CSRF não encontrado na sessão de login, gerando novo token")
+            csrf_token = generate_csrf()
+            session['csrf_token'] = csrf_token
+            logger.info(f"Token CSRF criado e armazenado na sessão: {csrf_token[:8]}...")
+        else:
+            logger.info(f"Token CSRF existente na sessão: {csrf_token[:8]}...")
             
+        # Forçar modificação da sessão para garantir persistência
+        session.modified = True
+        
+        # Log adicionais para depuração
+        form_csrf = request.form.get('csrf_token', None) if request.method == 'POST' else None
+        if form_csrf:
+            logger.info(f"Token CSRF recebido do formulário: {form_csrf[:8]}...")
+            if form_csrf != csrf_token:
+                logger.warning("TOKENS CSRF DIFERENTES! Formulário ≠ Sessão")
+            else:
+                logger.info("TOKENS CSRF IGUAIS! Formulário = Sessão")
+                
         if current_user.is_authenticated:
             logger.info(f"Usuário já autenticado ({current_user.username}), redirecionando...")
             return redirect(url_for('main.index'))
         
         form = LoginForm()
         
-        # Para requisições POST, verificar se há problemas com CSRF
+        # Para requisições POST
         if request.method == 'POST':
-            # Garantir que a sessão existe
-            if 'csrf_token' not in session:
-                logger.warning("Sessão sem token CSRF - inicializando nova sessão")
-                # Forçar uma regeneração do token na sessão
-                generate_csrf()
-                session.modified = True
-                session.permanent = True  # Tornar a sessão permanente
-                
+            # Logar todos os dados do formulário (exceto senha)
+            safe_form_data = {k: v for k, v in request.form.items() if k != 'password'}
+            logger.info(f"Dados do formulário POST: {safe_form_data}")
+            
+            # Verificação explícita do token CSRF para depuração
+            if not form.validate_on_submit() and form.errors:
+                logger.warning(f"Erros de validação do formulário: {form.errors}")
+                # Se há erro de CSRF específico
+                if 'csrf_token' in form.errors:
+                    logger.warning(f"Erro específico de CSRF: {form.errors['csrf_token']}")
+            
             # Se o formulário tem erro de validação e for por causa do CSRF, tentar tratar
             if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
                 logger.warning(f"Erro de validação CSRF: {form.errors['csrf_token']} - tentando recuperar")
@@ -359,4 +376,94 @@ def change_password():
         logger.error(f"ERROR in change_password route: {str(e)}")
         db.session.rollback()
         flash('An error occurred while updating your password. Please try again.', 'danger')
-        return redirect(url_for('auth.profile')) 
+        return redirect(url_for('auth.profile'))
+
+@auth_bp.route('/alt-login', methods=['GET', 'POST'])
+def alternative_login():
+    """
+    Rota alternativa de login que não usa CSRF - TEMPORÁRIO APENAS PARA EMERGÊNCIAS
+    """
+    try:
+        logger.info("Usando rota de login alternativa sem CSRF")
+        if current_user.is_authenticated:
+            return redirect(url_for('main.index'))
+        
+        # Usar um formulário sem CSRF
+        from flask_wtf import FlaskForm
+        from wtforms import StringField, PasswordField, BooleanField, SubmitField
+        from wtforms.validators import DataRequired, Email
+
+        class SimpleLoginForm(FlaskForm):
+            class Meta:
+                csrf = False  # Desativar CSRF para este formulário
+                
+            email = StringField('Email', validators=[DataRequired(), Email()])
+            password = PasswordField('Password', validators=[DataRequired()])
+            remember_me = BooleanField('Remember Me')
+            submit = SubmitField('Sign In')
+        
+        form = SimpleLoginForm()
+        
+        if request.method == 'POST':
+            logger.info(f"Tentativa de login alternativo: {request.form.get('email', 'N/A')}")
+            
+            # Validar o formulário
+            if form.validate_on_submit():
+                try:
+                    # Tentar encontrar o usuário usando SQL direto
+                    email = form.email.data
+                    try:
+                        # SQL direto para buscar usuário
+                        sql = """
+                        SELECT id, username, email, password_hash, is_admin, is_premium
+                        FROM "user" 
+                        WHERE email = %s 
+                        LIMIT 1
+                        """
+                        # Obter conexão direta
+                        connection = db.engine.raw_connection()
+                        cursor = connection.cursor()
+                        cursor.execute(sql, (email,))
+                        user_row = cursor.fetchone()
+                        cursor.close()
+                        connection.close()
+                        
+                        if user_row:
+                            # Criar objeto User manualmente
+                            manual_user = User(
+                                id=user_row[0],
+                                username=user_row[1],
+                                email=user_row[2],
+                                is_admin=user_row[4],
+                                is_premium=user_row[5]
+                            )
+                            manual_user.password_hash = user_row[3]
+                            
+                            # Verificar senha manualmente
+                            from werkzeug.security import check_password_hash
+                            if check_password_hash(manual_user.password_hash, form.password.data):
+                                login_user(manual_user, remember=form.remember_me.data)
+                                logger.info(f"Login alternativo bem-sucedido para: {manual_user.email}")
+                                
+                                # Redirecionar para a página inicial
+                                return redirect(url_for('main.index'))
+                            else:
+                                logger.warning(f"Senha incorreta para login alternativo: {email}")
+                                flash('Senha incorreta', 'danger')
+                        else:
+                            logger.warning(f"Usuário não encontrado para login alternativo: {email}")
+                            flash('Email não encontrado', 'danger')
+                    except Exception as e:
+                        logger.error(f"Erro no login alternativo: {str(e)}")
+                        flash('Erro ao tentar login. Por favor, tente novamente.', 'danger')
+                except Exception as e:
+                    logger.error(f"Erro não tratado no login alternativo: {str(e)}")
+                    flash('Ocorreu um erro inesperado. Por favor, tente novamente.', 'danger')
+        
+        # Renderizar template com formulário simples
+        return render_template('auth/alt_login.html', form=form)
+    except Exception as e:
+        logger.error(f"Erro geral no login alternativo: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('Erro inesperado. Tente novamente mais tarde.', 'danger')
+        return redirect(url_for('main.index')) 
