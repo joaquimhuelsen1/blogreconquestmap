@@ -107,7 +107,6 @@ def login():
                         
                         if user_row:
                             # Criar objeto User manualmente
-                            from app.models import User
                             manual_user = User(
                                 id=user_row[0],
                                 username=user_row[1],
