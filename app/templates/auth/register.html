@@ -7,8 +7,8 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Register</h4>
+                <div class="card-header text-center" style="background-color: #F1F1F1;">
+                    <h4 class="mb-0" style="color: #C60000; font-weight: 500;">Register</h4>
                 </div>
                 <div class="card-body">
                     {% include '_messages.html' %}
@@ -50,7 +50,7 @@
                         </div>
                         
                         <div class="d-grid gap-2">
-                            {{ form.submit(class="btn btn-primary btn-block") }}
+                            {{ form.submit(class="btn btn-block", style="background-color: #C60000; color: white;") }}
                         </div>
                     </form>
                 </div>

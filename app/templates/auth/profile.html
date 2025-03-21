@@ -6,8 +6,8 @@
 <div class="row">
     <div class="col-md-6 offset-md-3">
         <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="m-0">Edit Profile</h4>
+            <div class="card-header text-center" style="background-color: #F1F1F1;">
+                <h4 class="m-0" style="color: #C60000; font-weight: 500;">Edit Profile</h4>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('auth.profile') }}">
@@ -53,7 +53,7 @@
                     </div>
                     
                     <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
+                        {{ form.submit(class="btn", style="background-color: #C60000; color: white;") }}
                     </div>
                 </form>
                 
