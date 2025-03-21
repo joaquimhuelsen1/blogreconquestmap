@@ -14,7 +14,7 @@
                     {% include '_messages.html' %}
                     
                     <form method="POST" action="{{ url_for('auth.login') }}">
-                        <!-- Usar token CSRF explícito passado pelo controlador -->
+                        <!-- Token CSRF explícito para garantir que o formulário seja validado -->
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         
                         <div class="form-group mb-3">

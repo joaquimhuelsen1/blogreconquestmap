@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, session, g, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, g, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 # Importar Flask-Migrate condicionalmente
@@ -469,10 +469,25 @@ def create_app():
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         logger.warning(f"Erro CSRF detectado: {str(e)}")
-        flash('A sessão expirou ou é inválida. Por favor, tente novamente.', 'warning')
-        # Redirecionar para a página atual ou para a página inicial
-        next_page = request.full_path if request.full_path != '/auth/logout' else '/'
-        return redirect(next_page)
+        # Gerar novo token CSRF para a sessão
+        from flask_wtf.csrf import generate_csrf
+        try:
+            # Regenerar token CSRF e garantir que a sessão é permanente
+            token = generate_csrf()
+            session['csrf_token'] = token
+            session.modified = True
+            session.permanent = True
+            logger.info(f"Novo token CSRF gerado após erro: {token[:8]}...")
+            
+            # Mensagem para o usuário
+            flash('A sessão expirou ou é inválida. Por favor, tente novamente.', 'warning')
+            
+            # Redirecionar para a página atual ou para a página inicial
+            next_page = request.full_path if request.full_path != '/auth/logout' else '/'
+            return redirect(next_page)
+        except Exception as csrf_handler_error:
+            logger.error(f"Erro ao tratar CSRF: {str(csrf_handler_error)}")
+            return render_template('errors/500.html', error="Erro de sessão"), 500
     
     # Página de erro para 404
     @app.errorhandler(404)

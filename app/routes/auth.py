@@ -31,6 +31,24 @@ csrf = CSRFProtect()
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     try:
+        # Inicializar a sessão se ela não existir
+        if not session:
+            logger.warning("Sessão não inicializada no login, criando nova")
+            session.clear()
+            session.permanent = True
+        
+        # Inicializar token CSRF na sessão
+        if 'csrf_token' not in session:
+            logger.warning("Token CSRF não encontrado na sessão de login, gerando novo token")
+            token = generate_csrf()
+            session['csrf_token'] = token
+            logger.info(f"Token CSRF criado e armazenado na sessão: {token[:8]}...")
+            session.modified = True
+            
+        # Log de depuração da sessão
+        logger.info(f"ID da sessão no login: {session.sid if hasattr(session, 'sid') else 'N/A'}")
+        logger.info(f"Chaves na sessão: {list(session.keys())}")
+            
         if current_user.is_authenticated:
             logger.info(f"Usuário já autenticado ({current_user.username}), redirecionando...")
             return redirect(url_for('main.index'))
