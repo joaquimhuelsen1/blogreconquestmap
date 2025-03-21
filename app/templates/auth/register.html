@@ -48,6 +48,22 @@
                             {% endfor %}
                         </div>
                         
+                        <div class="form-group mb-3">
+                            {{ form.age.label(class="form-label") }}
+                            {{ form.age(class="form-control", type="number", min="18", max="99") }}
+                            {% for error in form.age.errors %}
+                                <small class="text-danger">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            {{ form.terms(class="form-check-input") }}
+                            {{ form.terms.label(class="form-check-label") }}
+                            {% for error in form.terms.errors %}
+                                <small class="text-danger d-block">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-block", style="background-color: #C60000; color: white;") }}
                         </div>
