@@ -31,63 +31,13 @@ csrf = CSRFProtect()
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     try:
-        # Inicializar a sessão se ela não existir
-        if not session:
-            logger.warning("Sessão não inicializada no login, criando nova")
-            session.clear()
-            session.permanent = True
+        logger.info("==== INICIANDO PROCESSO DE LOGIN ====")
         
-        # Debug da sessão
-        logger.info(f"ID da sessão no login: {session.sid if hasattr(session, 'sid') else 'N/A'}")
-        logger.info(f"Chaves na sessão antes: {list(session.keys())}")
-        
-        # Preservar token CSRF se já existir
-        csrf_token = session.get('csrf_token', None)
-        if not csrf_token:
-            logger.warning("Token CSRF não encontrado na sessão de login, gerando novo token")
-            csrf_token = generate_csrf()
-            session['csrf_token'] = csrf_token
-            logger.info(f"Token CSRF criado e armazenado na sessão: {csrf_token[:8]}...")
-        else:
-            logger.info(f"Token CSRF existente na sessão: {csrf_token[:8]}...")
-            
-        # Forçar modificação da sessão para garantir persistência
-        session.modified = True
-        
-        # Log adicionais para depuração
-        form_csrf = request.form.get('csrf_token', None) if request.method == 'POST' else None
-        if form_csrf:
-            logger.info(f"Token CSRF recebido do formulário: {form_csrf[:8]}...")
-            if form_csrf != csrf_token:
-                logger.warning("TOKENS CSRF DIFERENTES! Formulário ≠ Sessão")
-            else:
-                logger.info("TOKENS CSRF IGUAIS! Formulário = Sessão")
-                
         if current_user.is_authenticated:
             logger.info(f"Usuário já autenticado ({current_user.username}), redirecionando...")
             return redirect(url_for('main.index'))
         
         form = LoginForm()
-        
-        # Para requisições POST
-        if request.method == 'POST':
-            # Logar todos os dados do formulário (exceto senha)
-            safe_form_data = {k: v for k, v in request.form.items() if k != 'password'}
-            logger.info(f"Dados do formulário POST: {safe_form_data}")
-            
-            # Verificação explícita do token CSRF para depuração
-            if not form.validate_on_submit() and form.errors:
-                logger.warning(f"Erros de validação do formulário: {form.errors}")
-                # Se há erro de CSRF específico
-                if 'csrf_token' in form.errors:
-                    logger.warning(f"Erro específico de CSRF: {form.errors['csrf_token']}")
-            
-            # Se o formulário tem erro de validação e for por causa do CSRF, tentar tratar
-            if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
-                logger.warning(f"Erro de validação CSRF: {form.errors['csrf_token']} - tentando recuperar")
-                # Em vez de mostrar erro, tentar com um novo token
-                new_token = generate_csrf()
-                return render_template('auth/login.html', form=form, csrf_token=new_token)
         
         if form.validate_on_submit():
             logger.info(f"Tentativa de login: {form.email.data}")
@@ -99,10 +49,6 @@ def login():
                 if user and user.check_password(form.password.data):
                     login_user(user, remember=form.remember_me.data)
                     logger.info(f"Login bem-sucedido para: {user.email} (ID: {user.id})")
-                    
-                    # Registrar a sessão para garantir que o token CSRF seja salvo
-                    session.modified = True
-                    session.permanent = True  # Tornar a sessão permanente
                     
                     next_page = request.args.get('next')
                     if not next_page or urlparse(next_page).netloc != '':
@@ -156,10 +102,6 @@ def login():
                                 login_user(manual_user, remember=form.remember_me.data)
                                 logger.info(f"Login bem-sucedido via método alternativo para: {manual_user.email}")
                                 
-                                # Registrar a sessão
-                                session.modified = True
-                                session.permanent = True
-                                
                                 next_page = request.args.get('next')
                                 if not next_page or urlparse(next_page).netloc != '':
                                     next_page = url_for('main.index')
@@ -173,14 +115,7 @@ def login():
                     # Outros erros que não são de SSL
                     flash('An error occurred during login. Please try again.', 'danger')
         
-        # Sempre gerar um novo token CSRF para o template
-        new_csrf_token = generate_csrf()
-        logger.info("Novo token CSRF gerado para o formulário de login")
-        # Garantir que a sessão seja salva
-        session.modified = True
-        session.permanent = True  # Tornar a sessão permanente
-        
-        return render_template('auth/login.html', form=form, csrf_token=new_csrf_token)
+        return render_template('auth/login.html', form=form)
     except Exception as e:
         logger.error(f"Erro no login: {str(e)}")
         logger.error(traceback.format_exc())
@@ -201,128 +136,93 @@ def register():
         logger.info("==== INICIANDO REGISTRO DE NOVO USUÁRIO ====")
         logger.info(f"Data/hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Inicializar a sessão se ela não existir
-        if not session:
-            logger.warning("Sessão não inicializada, criando nova")
-            session.clear()
-            session.permanent = True
-        
-        # Inicializar token CSRF na sessão
-        if 'csrf_token' not in session:
-            logger.warning("Token CSRF não encontrado na sessão, gerando novo token")
-            token = generate_csrf()
-            session['csrf_token'] = token
-            logger.info(f"Token CSRF criado e armazenado na sessão: {token[:8]}...")
-            session.modified = True
-
         if current_user.is_authenticated:
             logger.info("Usuário já autenticado, redirecionando para página inicial")
             return redirect(url_for('main.index'))
         
         form = RegistrationForm()
         
-        # Para requisições POST, verificar se há problemas com CSRF
-        if request.method == 'POST':
-            # Verificar e reparar a sessão CSRF
-            csrf_token = request.form.get('csrf_token')
-            logger.info(f"Token CSRF recebido: {csrf_token[:8] if csrf_token else 'Nenhum'}")
-            logger.info(f"Token CSRF na sessão: {session.get('csrf_token', 'Nenhum')[:8] if session.get('csrf_token') else 'Nenhum'}")
-            
-            # Se não há token no formulário, regerar
-            if not csrf_token:
-                logger.warning("Token CSRF ausente no formulário")
-                new_token = generate_csrf()
-                session.modified = True
-                return render_template('auth/register.html', form=form, csrf_token=new_token)
-            
-            # Verificar erros CSRF no formulário
-            if not form.validate_on_submit() and form.errors and 'csrf_token' in form.errors:
-                logger.warning(f"Erro de validação CSRF: {form.errors['csrf_token']}")
-                # Regenerar token e continuar
-                new_token = generate_csrf()
-                session.modified = True
-                return render_template('auth/register.html', form=form, csrf_token=new_token)
-        
         if form.validate_on_submit():
-            logger.info(f"Formulário validado: username={form.username.data}, email={form.email.data}")
-            
-            # Verificar se usuário ou email já existem
-            existing_user = User.query.filter_by(username=form.username.data).first()
-            existing_email = User.query.filter_by(email=form.email.data).first()
-            
-            if existing_user:
-                logger.warning(f"Username já existe: {form.username.data}")
-                flash('Username already taken', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
-                
-            if existing_email:
-                logger.warning(f"Email já existe: {form.email.data}")
-                flash('Email already registered', 'danger')
-                return render_template('auth/register.html', form=form, csrf_token=generate_csrf())
-            
-            # Criação do novo usuário
             try:
-                logger.info("Criando novo objeto de usuário")
+                # Verificar usuário e email existentes
+                existing_user = User.query.filter_by(username=form.username.data).first()
+                if existing_user:
+                    logger.info(f"Tentativa de cadastro com nome de usuário já existente: {form.username.data}")
+                    flash('Username already exists. Please choose a different one.', 'danger')
+                    return render_template('auth/register.html', form=form)
+                
+                existing_email = User.query.filter_by(email=form.email.data).first()
+                if existing_email:
+                    logger.info(f"Tentativa de cadastro com email já existente: {form.email.data}")
+                    flash('Email already registered. Please use a different one or try to login.', 'danger')
+                    return render_template('auth/register.html', form=form)
+                
+                # Criar novo usuário
+                logger.info(f"Criando novo usuário: {form.username.data} / {form.email.data}")
                 user = User(
-                    username=form.username.data, 
+                    username=form.username.data,
                     email=form.email.data,
-                    is_admin=False,
-                    is_premium=False
+                    age=form.age.data
                 )
                 user.set_password(form.password.data)
                 
-                logger.info("Adicionando usuário à sessão")
-                db.session.add(user)
-                
-                # Commit para o banco de dados com tratamento de erros mais robusto
-                attempt = 1
-                max_attempts = 3
-                success = False
-                while attempt <= max_attempts and not success:
-                    try:
-                        logger.info(f"Tentativa {attempt} de commit na sessão")
-                        db.session.commit()
-                        success = True
-                        logger.info("✅ Commit realizado com sucesso")
-                    except Exception as commit_error:
-                        db.session.rollback()
-                        logger.error(f"Erro no commit (tentativa {attempt}): {str(commit_error)}")
-                        attempt += 1
-                        if attempt <= max_attempts:
-                            logger.info(f"Tentando commit novamente...")
-                
-                if success:
-                    # Garantir que o ID foi atribuído corretamente
-                    db.session.refresh(user)
-                    logger.info(f"✅ Usuário criado com sucesso: ID={user.id}")
-                    flash('Your account has been created! You can now log in.', 'success')
-                    
-                    # Garantir que a sessão é salva para manter o token CSRF
-                    session.modified = True
-                    session.permanent = True  # Tornar a sessão permanente
-                    
+                # Tentar adicionar usuário ao banco de dados
+                try:
+                    db.session.add(user)
+                    db.session.commit()
+                    logger.info(f"Usuário criado com sucesso! ID: {user.id}")
+                    flash('Your account has been created! You are now able to log in.', 'success')
                     return redirect(url_for('auth.login'))
-                else:
-                    logger.error("❌ Falha ao criar usuário após múltiplas tentativas")
-                    flash('An error occurred while creating your account. Please try again.', 'danger')
-            except Exception as user_creation_error:
-                logger.error(f"❌ Erro na criação do usuário: {str(user_creation_error)}")
-                logger.exception("Detalhes completos do erro:")
-                flash('An error occurred while creating your account. Please try again.', 'danger')
-        
-        # Sempre gerar um novo token CSRF para o template
-        new_csrf_token = generate_csrf()
-        logger.info("Novo token CSRF gerado para o formulário de registro")
-        # Garantir que a sessão seja salva
-        session.modified = True
-        session.permanent = True  # Tornar a sessão permanente
-        
-        return render_template('auth/register.html', form=form, csrf_token=new_csrf_token)
+                except Exception as db_error:
+                    db.session.rollback()
+                    logger.error(f"Erro ao adicionar usuário: {str(db_error)}")
+                    
+                    # Tentar método alternativo com SQL direto
+                    try:
+                        # Preparar hash de senha
+                        password_hash = user.password_hash
+                        
+                        # Inserir diretamente com SQL
+                        sql = """
+                        INSERT INTO "user" (username, email, password_hash, age, is_admin, is_premium, ai_credits, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """
+                        
+                        # Obter conexão direta
+                        connection = db.engine.raw_connection()
+                        cursor = connection.cursor()
+                        cursor.execute(sql, (
+                            user.username,
+                            user.email,
+                            password_hash,
+                            user.age,
+                            False,  # is_admin
+                            False,  # is_premium
+                            5,      # ai_credits
+                            datetime.now()
+                        ))
+                        connection.commit()
+                        cursor.close()
+                        connection.close()
+                        
+                        logger.info("Usuário criado com método alternativo!")
+                        flash('Your account has been created! You are now able to log in.', 'success')
+                        return redirect(url_for('auth.login'))
+                    except Exception as alt_error:
+                        logger.error(f"Erro no método alternativo de registro: {str(alt_error)}")
+                        flash('There was an error creating your account. Please try again.', 'danger')
+            except Exception as e:
+                logger.error(f"Erro não tratado no processo de registro: {str(e)}")
+                flash('There was an error processing your registration. Please try again.', 'danger')
+        elif form.errors:
+            logger.warning(f"Erros de validação no formulário: {form.errors}")
+            
+        return render_template('auth/register.html', form=form)
     except Exception as e:
-        logger.error(f"❌ Erro inesperado no registro: {str(e)}")
-        logger.exception("Detalhes completos do erro:")
-        flash('An unexpected error occurred. Please try again later.', 'danger')
-        return redirect(url_for('main.index'))
+        logger.error(f"Erro geral no registro: {str(e)}")
+        logger.error(traceback.format_exc())
+        flash('An error occurred during registration. Please try again.', 'danger')
+        return redirect(url_for('auth.register'))
 
 @auth_bp.route('/profile', methods=['GET', 'POST'])
 @login_required

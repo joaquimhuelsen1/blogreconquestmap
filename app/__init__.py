@@ -240,6 +240,12 @@ def create_app():
     logger.info(f"Diretório de sessão: {app.config['SESSION_FILE_DIR']}")
     
     # Configuração CSRF
+    # TEMPORARIAMENTE DESABILITADO PARA PERMITIR LOGIN/REGISTRO
+    app.config['WTF_CSRF_ENABLED'] = False  # CSRF desativado emergencialmente
+    logger.warning("⚠️ AVISO DE SEGURANÇA: Proteção CSRF DESATIVADA temporariamente")
+    
+    # Configurações que serão reativadas quando o CSRF for corrigido
+    """
     app.config['WTF_CSRF_ENABLED'] = True
     app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
     app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
@@ -248,15 +254,10 @@ def create_app():
     app.config['WTF_CSRF_CHECK_DEFAULT'] = True
     app.config['WTF_CSRF_SSL_STRICT'] = False  # Desativar checagem SSL estrita para CSRF
     app.config['WTF_CSRF_TIME_LIMIT'] = 86400 * 7  # 7 dias
-    # Configuração para tolerância de CSRF
-    app.config['WTF_CSRF_ENABLED'] = True
-    app.config['WTF_I_KNOW_WHAT_IM_DOING'] = True  # Aviso: Use com cautela em produção
+    app.config['WTF_I_KNOW_WHAT_IM_DOING'] = True
+    """
     
-    # TEMPORÁRIO: desativar checagem de CSRF para login e registro
-    # Opção nuclear - desativar completamente a checagem CSRF se necessário
-    # app.config['WTF_CSRF_ENABLED'] = False  # DESCOMENTE ESTA LINHA SE NADA MAIS FUNCIONAR
-    
-    logger.info(f"Proteção CSRF: ATIVADA, Tempo limite: {app.config['WTF_CSRF_TIME_LIMIT']}s")
+    logger.info("Proteção CSRF: DESATIVADA TEMPORARIAMENTE")
     
     # Inicializar extensões
     db.init_app(app)

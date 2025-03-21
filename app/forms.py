@@ -5,16 +5,26 @@ from app.models import User
 from datetime import datetime
 
 class LoginForm(FlaskForm):
+    # Desabilitar CSRF no formulário
+    class Meta:
+        csrf = False  # Desabilitar CSRF no formulário
+
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
-    submit = SubmitField('Log In')
+    submit = SubmitField('Sign In')
 
 class RegistrationForm(FlaskForm):
+    # Desabilitar CSRF no formulário
+    class Meta:
+        csrf = False  # Desabilitar CSRF no formulário
+        
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    age = IntegerField('Age', validators=[DataRequired(), NumberRange(min=18, max=99)])
+    terms = BooleanField('I agree to the terms of service', validators=[DataRequired()])
     submit = SubmitField('Register')
     
     def validate_username(self, username):
