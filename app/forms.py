@@ -7,8 +7,8 @@ from datetime import datetime
 class LoginForm(FlaskForm):
     # Desabilitar CSRF no formulário
     class Meta:
-        csrf = False  # Desabilitar CSRF no formulário
-
+        csrf = False
+        
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
@@ -17,7 +17,7 @@ class LoginForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     # Desabilitar CSRF no formulário
     class Meta:
-        csrf = False  # Desabilitar CSRF no formulário
+        csrf = False
         
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Email()])
