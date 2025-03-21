@@ -4,7 +4,7 @@ from flask_login import LoginManager
 # Importar Flask-Migrate condicionalmente
 import importlib.util
 # from flask_session import Session
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from config import Config
 # Definir a variável SUPABASE_DIRECT_URL como global no módulo
 SUPABASE_DIRECT_URL = None
@@ -242,6 +242,10 @@ def create_app():
     app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
     app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
     app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken', 'X-CSRF-Token']
+    app.config['WTF_CSRF_SECRET_KEY'] = app.config['SECRET_KEY']  # Usar a mesma chave secreta
+    app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+    app.config['WTF_CSRF_SSL_STRICT'] = False
+    app.config['WTF_CSRF_TIME_LIMIT'] = 86400  # 24 horas
     logger.info(f"Proteção CSRF: ATIVADA, Tempo limite: {app.config['WTF_CSRF_TIME_LIMIT']}s")
     
     # Inicializar extensões
@@ -458,6 +462,15 @@ def create_app():
             logger.error(f"❌ Erro ao criar tabelas do banco de dados: {str(e)}")
             logger.exception("Detalhes do erro ao criar tabelas:")
     
+    # Handler específico para erros de CSRF
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        logger.warning(f"Erro CSRF detectado: {str(e)}")
+        flash('A sessão expirou ou é inválida. Por favor, tente novamente.', 'warning')
+        # Redirecionar para a página atual ou para a página inicial
+        next_page = request.full_path if request.full_path != '/auth/logout' else '/'
+        return redirect(next_page)
+    
     # Página de erro para 404
     @app.errorhandler(404)
     def page_not_found(e):
@@ -470,10 +483,14 @@ def create_app():
         logger.error(f"Erro interno do servidor: {str(e)}")
         return render_template('errors/500.html', error=str(e)), 500
     
-    # Adicionar variável now para os templates
+    # Adicionar variável now para os templates e token CSRF
     @app.context_processor
-    def inject_now():
-        return {'now': datetime.utcnow()}
+    def inject_template_globals():
+        from flask_wtf.csrf import generate_csrf
+        return {
+            'now': datetime.utcnow(),
+            'csrf_token': generate_csrf()
+        }
     
     logger.info("==== APLICAÇÃO FLASK INICIALIZADA COM SUCESSO ====")
     return app
