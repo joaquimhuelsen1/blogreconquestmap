@@ -18,11 +18,10 @@ import socket
 
 # Configurar logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
     handlers=[
-        logging.FileHandler("app_init_debug.log"),
-        logging.StreamHandler()
+        logging.FileHandler("app_init_debug.log")
     ]
 )
 logger = logging.getLogger('blog_app_init')
