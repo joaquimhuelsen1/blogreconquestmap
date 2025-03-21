@@ -122,13 +122,18 @@ def login():
         flash('An error occurred during login. Please try again.', 'danger')
         return redirect(url_for('auth.login'))
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
-    logout_user()
-    # Limpar a sessão
-    session.clear()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('main.index'))
+    try:
+        logger.info("Realizando logout do usuário")
+        logout_user()
+        # Limpar a sessão
+        session.clear()
+        flash('You have been logged out.', 'info')
+        return redirect(url_for('main.index'))
+    except Exception as e:
+        logger.error(f"Erro ao fazer logout: {str(e)}")
+        return redirect(url_for('main.index'))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
