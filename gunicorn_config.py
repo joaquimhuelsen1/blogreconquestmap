@@ -10,7 +10,7 @@ errorlog = "-"    # Envia erros para stderr
 loglevel = "warning"  # Apenas warnings e erros
 
 # Timeout
-timeout = 120
+timeout = 300
 
 # Modo silencioso
 capture_output = True  # Captura stdout/stderr
