@@ -1,4 +1,7 @@
-from app import create_app
+import sys
+import os
+from app import create_app, db
+from flask import render_template, current_app
 
 # Criação da aplicação principal
 app = create_app()
