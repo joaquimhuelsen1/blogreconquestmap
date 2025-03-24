@@ -10,4 +10,6 @@ COPY . .
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 
+EXPOSE 8000
+
 CMD ["gunicorn", "--config", "gunicorn_config.py", "run:application"] 
